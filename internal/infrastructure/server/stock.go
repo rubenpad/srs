@@ -1,7 +1,7 @@
-package rest
+package server
 
 import (
-	"github.com/rubenpad/stock-rating-system/domain/ports"
+	"github.com/rubenpad/stock-rating-system/internal/domain/ports"
 
 	"github.com/gin-gonic/gin"
 )

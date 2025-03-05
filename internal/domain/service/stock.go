@@ -1,6 +1,6 @@
 package service
 
-import "github.com/rubenpad/stock-rating-system/domain/ports"
+import "github.com/rubenpad/stock-rating-system/internal/domain/ports"
 
 type Stock struct {
 	repository ports.IStockRepository
