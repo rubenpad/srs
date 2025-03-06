@@ -17,7 +17,10 @@ type config struct {
 	Port            uint          `default:"8080"`
 	ShutdownTimeout time.Duration `default:"10s"`
 	// Database configuration
-	DatabaseUrl string
+	Database         string
+	DatabaseHost     string
+	DatabaseUser     string
+	DatabasePassword string
 }
 
 func Run() error {
@@ -27,13 +30,16 @@ func Run() error {
 		return err
 	}
 
-	connectionPoolConfig, err := pgxpool.ParseConfig(configuration.DatabaseUrl + "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s")
+	connectionString := fmt.Sprintf("%s:%s@%s:%d/%s", configuration.DatabaseUser, configuration.DatabasePassword, configuration.Host, configuration.Port, configuration.Database)
+	connectionPoolConfig, err := pgxpool.ParseConfig(connectionString + "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s")
 	if err != nil {
 		return fmt.Errorf("failed to parse connection pool config: %v", err)
 	}
 
-	connectionPool, err := pgxpool.NewWithConfig(context.Background(), connectionPoolConfig)
-	if err != nil {
+	connectionPoolContext := context.Background()
+	connectionPool, configError := pgxpool.NewWithConfig(connectionPoolContext, connectionPoolConfig)
+
+	if err := connectionPool.Ping(connectionPoolContext); err != nil || configError != nil {
 		return fmt.Errorf("failed to create connection pool: %v", err)
 	}
 
