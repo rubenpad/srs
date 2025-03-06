@@ -1,7 +1,13 @@
 package main
 
-import "github.com/rubenpad/stock-rating-system/cmd/api/bootstrap"
+import (
+	"log"
+
+	"github.com/rubenpad/stock-rating-system/cmd/api/bootstrap"
+)
 
 func main() {
-	bootstrap.Run()
+	if err := bootstrap.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

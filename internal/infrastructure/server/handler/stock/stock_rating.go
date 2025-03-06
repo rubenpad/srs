@@ -1,4 +1,4 @@
-package server
+package stock
 
 import (
 	"github.com/rubenpad/stock-rating-system/internal/domain/ports"

@@ -2,38 +2,44 @@ package bootstrap
 
 import (
 	"context"
-	"log"
-	"os"
+	"fmt"
+	"time"
 
-	"github.com/rubenpad/stock-rating-system/internal/domain/service"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/storage/cockroach"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kelseyhightower/envconfig"
 )
 
-func Run() {
-	connectionPoolConfig, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL") + "sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s")
+type config struct {
+	// Server configuration
+	Host            string        `default:"localhost"`
+	Port            uint          `default:"8080"`
+	ShutdownTimeout time.Duration `default:"10s"`
+	// Database configuration
+	DatabaseUrl string
+}
+
+func Run() error {
+	var configuration config
+	err := envconfig.Process("SRI", &configuration)
 	if err != nil {
-		log.Fatalf("Failed to parse connection pool config: %v", err)
+		return err
+	}
+
+	connectionPoolConfig, err := pgxpool.ParseConfig(configuration.DatabaseUrl + "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s")
+	if err != nil {
+		return fmt.Errorf("failed to parse connection pool config: %v", err)
 	}
 
 	connectionPool, err := pgxpool.NewWithConfig(context.Background(), connectionPoolConfig)
 	if err != nil {
-		log.Fatalf("Failed to create connection pool: %v", err)
+		return fmt.Errorf("failed to create connection pool: %v", err)
 	}
 
 	defer connectionPool.Close()
 
-	stockController := server.NewStockController(service.NewStockService(cockroach.NewStockRepository(connectionPool)))
-	stockRatingController := server.NewStockRatingController(service.NewStockRatingService(cockroach.NewStockRatingRepository(connectionPool)))
+	ctx, srv := server.New(context.Background(), configuration.Host, configuration.Port, configuration.ShutdownTimeout, connectionPool)
 
-	server := gin.Default()
-	server.GET("/api/stocks", stockController.GetStocks)
-	server.GET("/api/stocks-rating", stockRatingController.GetStockRatings)
-
-	if err := server.Run(":8080"); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
-	}
+	return srv.Run(ctx)
 }
