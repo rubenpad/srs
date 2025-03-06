@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/rubenpad/stock-rating-system/domain/ports"
+	"github.com/rubenpad/stock-rating-system/internal/domain/ports"
 )
 
 type StockRatinService struct {
