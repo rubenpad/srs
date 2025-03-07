@@ -49,6 +49,7 @@ func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 	s.engine.GET("/api/health", health.HealthCheck)
 	s.engine.GET("/api/stocks", stockController.GetStocks)
 	s.engine.GET("/api/stock-ratings", stockRatingController.GetStockRatings)
+	s.engine.POST("/api/stock-ratings-data", stockRatingController.LoadStockRatingData)
 }
 
 func (s *Server) Run(ctx context.Context) error {

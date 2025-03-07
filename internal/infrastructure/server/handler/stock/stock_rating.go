@@ -28,3 +28,9 @@ func (src *StockRatingController) GetStockRatings(context *gin.Context) {
 
 	context.JSON(http.StatusOK, stockRatings)
 }
+
+func (src *StockRatingController) LoadStockRatingData(ctx *gin.Context) {
+	go src.stockRatingService.AnalyzeStockRatings(ctx)
+
+	ctx.JSON(http.StatusAccepted, gin.H{})
+}
