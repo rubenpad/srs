@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS stock_rating (
     brokerage CHAR(50) NOT NULL,
     action CHAR(50) NOT NULL,
     company CHAR(50) NOT NULL,
-    ticket CHAR(50) NOT NULL,
+    ticker CHAR(50) NOT NULL,
     rating_from CHAR(50) NOT NULL,
     rating_to CHAR(50) NOT NULL,
     target_from DECIMAL(10, 5) NOT NULL,

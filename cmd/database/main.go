@@ -34,7 +34,7 @@ func main() {
 		log.Fatal("error configuring migrations", err)
 	}
 
-	if err := migration.Up(); err != nil {
+	if err := migration.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Fatal("error executing migrations", err)
 	}
 
