@@ -10,6 +10,7 @@ type Stock struct {
 
 type IStockRepository interface {
 	Save(ctx context.Context, stock Stock) error
+	GetStock(ctx context.Context, ticker string) (*Stock, error)
 	GetStocks(ctx context.Context, limit int, offset int) ([]Stock, error)
 }
 

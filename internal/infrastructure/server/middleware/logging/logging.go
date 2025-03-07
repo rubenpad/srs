@@ -2,7 +2,6 @@ package logging
 
 import (
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +24,6 @@ func Middleware() gin.HandlerFunc {
 		c.Next()
 
 		// Results
-		logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 		timestamp := time.Now()
 		latency := timestamp.Sub(start)
@@ -33,7 +31,7 @@ func Middleware() gin.HandlerFunc {
 		method := c.Request.Method
 		statusCode := c.Writer.Status()
 
-		logger.Info("response",
+		slog.Info("response",
 			slog.Duration("timestamp", time.Duration(timestamp.Unix())),
 			slog.Int("statusCode", statusCode),
 			slog.Duration("latency", latency),

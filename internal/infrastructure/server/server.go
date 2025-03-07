@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rubenpad/stock-rating-system/internal/domain/service"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/api"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/health"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/stock"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/logging"
@@ -39,8 +41,10 @@ func New(ctx context.Context, host string, port uint, shutdownTimeout time.Durat
 func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 	s.engine.Use(gin.Recovery(), logging.Middleware())
 
-	stockController := stock.NewStockController(service.NewStockService(cockroach.NewStockRepository(connectionPool)))
-	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(cockroach.NewStockRatingRepository(connectionPool)))
+	stockRepository := cockroach.NewStockRepository(connectionPool)
+	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)
+	stockController := stock.NewStockController(service.NewStockService(stockRepository))
+	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, stockRepository, api.NewStockRatingApi()))
 
 	s.engine.GET("/api/health", health.HealthCheck)
 	s.engine.GET("/api/stocks", stockController.GetStocks)
@@ -48,7 +52,7 @@ func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	log.Println("Server running on", s.httpAddress)
+	slog.Info("Server running on", "httpAddress", s.httpAddress)
 
 	server := &http.Server{
 		Addr:    s.httpAddress,

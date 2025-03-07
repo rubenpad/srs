@@ -4,26 +4,36 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
 
 type StockRepository struct {
-	pool   *pgxpool.Pool
-	logger *slog.Logger
+	pool *pgxpool.Pool
 }
 
 func NewStockRepository(pool *pgxpool.Pool) *StockRepository {
-	return &StockRepository{pool, slog.New(slog.NewJSONHandler(os.Stdout, nil))}
+	return &StockRepository{pool}
+}
+
+func (sr *StockRepository) GetStock(ctx context.Context, ticker string) (*entity.Stock, error) {
+	row := sr.pool.QueryRow(ctx, `SELECT * FROM stock WHERE ticker = $1`, ticker)
+
+	var stock *entity.Stock
+	if err := row.Scan(&stock); err != nil {
+		slog.Error(fmt.Sprintf("error getting stock: %s", ticker), "error", err)
+		return nil, fmt.Errorf("error getting stock")
+	}
+
+	return stock, nil
 }
 
 func (sr *StockRepository) GetStocks(ctx context.Context, limit int, offset int) ([]entity.Stock, error) {
 	rows, err := sr.pool.Query(ctx, `SELECT * FROM stock LIMIT $1 OFFSET $2`, limit, offset)
 
 	if err != nil {
-		sr.logger.Error("error getting stocks", "error", err)
+		slog.Error("error getting stocks", "error", err)
 		return nil, fmt.Errorf("error getting stocks")
 	}
 
@@ -54,7 +64,7 @@ func (sr *StockRepository) Save(ctx context.Context, stock entity.Stock) error {
 		stock.Score).Scan(&stock)
 
 	if err != nil {
-		sr.logger.Error("error saving stock", "error", err)
+		slog.Error("error saving stock", "error", err)
 		return fmt.Errorf("error saving stock")
 	}
 

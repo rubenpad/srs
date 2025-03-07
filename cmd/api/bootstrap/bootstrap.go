@@ -9,6 +9,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/logging"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server"
 )
 
@@ -44,6 +45,7 @@ func Run() error {
 
 	defer connectionPool.Close()
 
+	logging.Set()
 	ctx, srv := server.New(context.Background(), configuration.Host, configuration.Port, configuration.ShutdownTimeout, connectionPool)
 
 	return srv.Run(ctx)
