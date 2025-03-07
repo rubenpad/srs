@@ -1,13 +1,6 @@
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS stock (
-    ticker VARCHAR(50) PRIMARY KEY,
-    company VARCHAR(100) NOT NULL,
-    score DECIMAL(10, 2) NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS stock_rating (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     brokerage VARCHAR(50) NOT NULL,
     action VARCHAR(50) NOT NULL,
     company VARCHAR(100) NOT NULL,
@@ -17,7 +10,11 @@ CREATE TABLE IF NOT EXISTS stock_rating (
     target_from VARCHAR(50) NOT NULL,
     target_to VARCHAR(50) NOT NULL,
     time TIMESTAMP NOT NULL,
-    target_price_change DECIMAL(10, 2) NOT NULL
+    target_price_change DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (brokerage, ticker),
+    CONSTRAINT unique_record UNIQUE (brokerage, ticker, time)
 );
+
+CREATE INDEX idx_stock_rating_ticker_brokerage_time ON stock_rating (ticker, brokerage, time DESC)
 
 COMMIT;

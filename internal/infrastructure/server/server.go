@@ -41,15 +41,13 @@ func New(ctx context.Context, host string, port uint, shutdownTimeout time.Durat
 func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 	s.engine.Use(gin.Recovery(), logging.Middleware())
 
-	stockRepository := cockroach.NewStockRepository(connectionPool)
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)
-	stockController := stock.NewStockController(service.NewStockService(stockRepository))
-	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, stockRepository, api.NewStockRatingApi()))
+	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, api.NewStockRatingApi()))
 
 	s.engine.GET("/api/health", health.HealthCheck)
-	s.engine.GET("/api/stocks", stockController.GetStocks)
 	s.engine.GET("/api/stock-ratings", stockRatingController.GetStockRatings)
 	s.engine.POST("/api/stock-ratings-data", stockRatingController.LoadStockRatingData)
+	s.engine.GET("/api/stock-recommendations", stockRatingController.GetStockRecommendations)
 }
 
 func (s *Server) Run(ctx context.Context) error {

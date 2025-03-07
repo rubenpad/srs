@@ -6,7 +6,6 @@ import (
 )
 
 type StockRating struct {
-	Id                string    `json:"id"`
 	Brokerage         string    `json:"brokerage"`
 	Action            string    `json:"action"`
 	Company           string    `json:"company"`
@@ -19,13 +18,24 @@ type StockRating struct {
 	TargetPriceChange float64   `json:"target_price_change"`
 }
 
+type StockRatingAggregate struct {
+	Ticker           string    `json:"ticker"`
+	Time             time.Time `json:"time"`
+	StrongBuyRatings int       `json:"strong_buy_ratings"`
+	BuyRatings       int       `json:"buy_ratings"`
+	HoldRatings      int       `json:"hold_ratings"`
+	SellRatings      int       `json:"sell_ratings"`
+}
+
 type IStockRatingApi interface {
 	GetStockRatings(ctx context.Context, nextPage string) ([]StockRating, string, error)
 }
 
 type IStockRatingRepository interface {
-	Save(ctx context.Context, stock StockRating) error
+	Save(ctx context.Context, stock StockRating)
+	BatchSave(ctx context.Context, stockRatings []StockRating)
 	GetStockRatings(ctx context.Context, limit int, offset int) ([]StockRating, error)
+	GetStockRecommendations(ctx context.Context, limit int) ([]StockRatingAggregate, error)
 }
 
 func NewStockRating(brokerage, action, company, ticker, ratingFrom, ratingTo, targetFrom, targetTo string, time time.Time, targetPriceChange float64) StockRating {

@@ -21,16 +21,31 @@ func (src *StockRatingController) GetStockRatings(context *gin.Context) {
 	if err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"code":    "internal_server_error",
-			"message": err.Error(),
+			"message": "error processing the request",
 		})
 		return
 	}
 
+	context.Header("Cache-Control", "private, max-age=86400")
 	context.JSON(http.StatusOK, stockRatings)
 }
 
+func (src *StockRatingController) GetStockRecommendations(context *gin.Context) {
+	stockRecommendations, err := src.stockRatingService.GetStockRecommendations(context, 1)
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal_server_error",
+			"message": "error processing the request",
+		})
+		return
+	}
+
+	context.Header("Cache-Control", "private, max-age=900")
+	context.JSON(http.StatusOK, stockRecommendations)
+}
+
 func (src *StockRatingController) LoadStockRatingData(ctx *gin.Context) {
-	go src.stockRatingService.AnalyzeStockRatings(ctx)
+	go src.stockRatingService.LoadStockRatingsData(ctx)
 
 	ctx.JSON(http.StatusAccepted, gin.H{})
 }
