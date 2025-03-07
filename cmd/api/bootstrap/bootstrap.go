@@ -28,7 +28,7 @@ type config struct {
 
 func Run() error {
 	var configuration config
-	err := envconfig.Process("SRI", &configuration)
+	err := envconfig.Process("SRS", &configuration)
 	if err != nil {
 		return err
 	}

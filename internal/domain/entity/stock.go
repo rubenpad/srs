@@ -3,9 +3,9 @@ package entity
 import "context"
 
 type Stock struct {
-	Ticker  string
-	Company string
-	Score   int
+	Ticker  string  `json:"ticker"`
+	Company string  `json:"company"`
+	Score   float64 `json:"score"`
 }
 
 type IStockRepository interface {
@@ -14,6 +14,6 @@ type IStockRepository interface {
 	GetStocks(ctx context.Context, limit int, offset int) ([]Stock, error)
 }
 
-func NewStock(ticker string, company string, score int) Stock {
+func NewStock(ticker string, company string, score float64) Stock {
 	return Stock{ticker, company, score}
 }

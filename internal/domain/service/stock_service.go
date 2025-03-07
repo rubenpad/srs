@@ -14,7 +14,7 @@ func NewStockService(stockRepository entity.IStockRepository) StockService {
 	return StockService{repository: stockRepository}
 }
 
-func (s StockService) CreateStock(ctx context.Context, ticker string, company string, score int) error {
+func (s StockService) CreateStock(ctx context.Context, ticker string, company string, score float64) error {
 	if err := s.repository.Save(ctx, entity.NewStock(ticker, company, score)); err != nil {
 		return err
 	}

@@ -2,17 +2,13 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
-
-const defaultItemsSize = 10
 
 var bullishRatings = []string{
 	"Strong-Buy",
@@ -62,8 +58,9 @@ type StockRatingService struct {
 
 func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, stockRepository entity.IStockRepository, stockRatingApi entity.IStockRatingApi) StockRatingService {
 	return StockRatingService{
-		stockRatingRepository: stockRatingRepository,
 		stockRatingApi:        stockRatingApi,
+		stockRepository:       stockRepository,
+		stockRatingRepository: stockRatingRepository,
 	}
 }
 
@@ -76,71 +73,57 @@ func (s StockRatingService) GetStockRatings(ctx context.Context, limit int, offs
 	return stockRatings, nil
 }
 
-func (s StockRatingService) AnalyzeStockRatings(ctx context.Context) error {
-	const workerCount = 4
-
-	results := make(chan error, defaultItemsSize)
-	jobs := make(chan entity.StockRating, defaultItemsSize)
-
-	var wg sync.WaitGroup
-	for range workerCount {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for rating := range jobs {
-				score := calculateRatingScore(rating)
-				stockRating := entity.NewStockRating(rating.Brokerage, rating.Action, rating.Company, rating.Ticker, rating.RatingFrom, rating.RatingTo, rating.TargetFrom, rating.TargetTo, rating.Time)
-
-				if err := s.stockRatingRepository.Save(ctx, stockRating); err != nil {
-					results <- fmt.Errorf("failed to save stock rating %s: %w", rating.Ticker, err)
-					continue
-				}
-
-				maybeExistingStock, err := s.stockRepository.GetStock(ctx, rating.Ticker)
-				if err != nil {
-					slog.Warn("error getting stock from database", "ticker", stockRating.Ticker)
-				}
-
-				newStock := entity.NewStock(rating.Ticker, rating.Company, score+maybeExistingStock.Score)
-				if err := s.stockRepository.Save(ctx, newStock); err != nil {
-					results <- fmt.Errorf("failed to save stock %s: %w", rating.Ticker, err)
-					continue
-				}
-
-				results <- nil
-			}
-		}()
-	}
-
+func (s StockRatingService) AnalyzeStockRatings(ctx context.Context) {
+	slog.Info("process to load stock ratings started")
 	nextPage := ""
+
 	for {
 		stockRatings, nNextPage, err := s.stockRatingApi.GetStockRatings(ctx, nextPage)
 		if err != nil {
-			return fmt.Errorf("failed to get stock ratings from API")
+			errorMessage := "failed to get stock ratings from API"
+			slog.Error(errorMessage, "error", err)
+			break
 		}
 
 		for _, rating := range stockRatings {
-			jobs <- rating
+
+			priceTargetChange, ratingScore := calculateRatingScore(rating)
+			stockRating := entity.NewStockRating(rating.Brokerage, rating.Action, rating.Company, rating.Ticker, rating.RatingFrom, rating.RatingTo, rating.TargetFrom, rating.TargetTo, rating.Time, priceTargetChange)
+
+			if err := s.stockRatingRepository.Save(ctx, stockRating); err != nil {
+				slog.Error("error saving stock rating", "error", err)
+				continue
+			}
+
+			s.saveStock(ctx, stockRating, ratingScore)
+
 		}
 
-		for range stockRatings {
-			if err := <-results; err != nil {
-				slog.Error("Error processing stock rating: %v\n", "error", err)
-			}
-		}
+		nextPage = nNextPage
 
 		if nNextPage == "" {
 			break
 		}
-
-		nextPage = nNextPage
 	}
 
-	close(jobs)
-	wg.Wait()
-	close(results)
+	slog.Info("process to load stock ratings finished")
+}
 
-	return nil
+func (s StockRatingService) saveStock(ctx context.Context, stockRating entity.StockRating, ratingScore float64) {
+	maybeExistingStock, err := s.stockRepository.GetStock(ctx, stockRating.Ticker)
+	if err != nil {
+		slog.Error("error getting stock from database", "ticker", stockRating.Ticker)
+	}
+
+	newScore := ratingScore
+	if maybeExistingStock != nil {
+		newScore += maybeExistingStock.Score
+	}
+
+	newStock := entity.NewStock(stockRating.Ticker, stockRating.Company, newScore)
+	if err := s.stockRepository.Save(ctx, newStock); err != nil {
+		slog.Error("error saving stock", "error", err)
+	}
 }
 
 func buildRatingsScaleMap() map[string]int {
@@ -169,8 +152,8 @@ func buildRatingsScaleMap() map[string]int {
 	return ratingScale
 }
 
-func calculateRatingScore(stockRating entity.StockRating) int {
-	score := 0
+func calculateRatingScore(stockRating entity.StockRating) (float64, float64) {
+	var score float64 = 0
 	ratingScale := buildRatingsScaleMap()
 
 	ratingFrom := ratingScale[stockRating.RatingFrom]
@@ -185,11 +168,15 @@ func calculateRatingScore(stockRating entity.StockRating) int {
 		}
 	}
 
-	score += calculateCurrentRatingScore(ratingTo) + calculatePriceTargetChangeScore(stockRating.TargetFrom, stockRating.TargetTo)
-	return score * int(calculateDateScore(stockRating.Time))
+	dateScore := calculateDateScore(stockRating.Time)
+	currentRatingScore := calculateCurrentRatingScore(ratingTo)
+	priceTargetChange, priceTargetChangeScore := calculatePriceTargetChangeScore(stockRating.TargetFrom, stockRating.TargetTo)
+	scoreResult := (score + currentRatingScore + priceTargetChangeScore) * dateScore
+
+	return priceTargetChange, scoreResult
 }
 
-func calculateCurrentRatingScore(ratingToScaleValue int) int {
+func calculateCurrentRatingScore(ratingToScaleValue int) float64 {
 	switch ratingToScaleValue {
 	case 1, 2:
 		return 2
@@ -202,36 +189,35 @@ func calculateCurrentRatingScore(ratingToScaleValue int) int {
 	}
 }
 
-func calculatePriceTargetChangeScore(rawTargetFrom, rawTargetTo string) int {
+func calculatePriceTargetChangeScore(rawTargetFrom, rawTargetTo string) (float64, float64) {
 	targetFrom, err := strconv.ParseFloat(strings.TrimPrefix(rawTargetFrom, "$"), 64)
 	if err != nil {
-		return 0
+		return 0, 0
 	}
 
 	targetTo, err := strconv.ParseFloat(strings.TrimPrefix(rawTargetTo, "$"), 64)
 	if err != nil {
-		return 0
+		return 0, 0
 	}
 
 	variation := (targetFrom - targetTo) / targetFrom * 100
 
 	if variation < 0 {
-		return -3
-	} else if variation >= 0.3 {
-		return 3
-	} else if variation >= 0.1 {
-		return 2
-	} else {
-		return 1
+		return variation, -3
 	}
+
+	if variation >= 0.3 {
+		return variation, 3
+	}
+
+	if variation >= 0.1 {
+		return variation, 2
+	}
+
+	return variation, 1
 }
 
-func calculateDateScore(dateStr string) float32 {
-	reportDate, err := time.Parse(time.RFC3339, dateStr)
-	if err != nil {
-		return 0
-	}
-
+func calculateDateScore(reportDate time.Time) float64 {
 	daysSinceReport := time.Since(reportDate).Hours() / 24
 
 	switch {

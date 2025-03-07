@@ -2,9 +2,11 @@ package cockroach
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
@@ -21,27 +23,14 @@ func (srr *StockRatingRepository) GetStockRatings(context context.Context, limit
 	rows, err := srr.pool.Query(context, "SELECT * FROM stock_rating")
 
 	if err != nil {
-		slog.Error("error getting stockRatings", "error", err)
-		return nil, fmt.Errorf("error getting stock ratings")
+		errorMessage := "error getting stock ratings"
+		slog.Error(errorMessage, "error", err)
+		return nil, errors.New(errorMessage)
 	}
 
 	defer rows.Close()
 
-	stockRatings := make([]entity.StockRating, 0, limit)
-	for rows.Next() {
-		var stockRating entity.StockRating
-		if err := rows.Scan(&stockRating); err != nil {
-			return nil, err
-		}
-
-		stockRatings = append(stockRatings, stockRating)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return stockRatings, nil
+	return pgx.CollectRows(rows, pgx.RowToStructByName[entity.StockRating])
 }
 
 func (srr *StockRatingRepository) Save(ctx context.Context, stockRating entity.StockRating) error {
@@ -54,8 +43,9 @@ func (srr *StockRatingRepository) Save(ctx context.Context, stockRating entity.S
 										rating_to,
 										target_from,
 										target_to,
-										time)
-									VALUES ($1, $2, $3) RETURNING *`,
+										time,
+										target_price_change)
+									VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
 		stockRating.Brokerage,
 		stockRating.Action,
 		stockRating.Company,
@@ -64,7 +54,8 @@ func (srr *StockRatingRepository) Save(ctx context.Context, stockRating entity.S
 		stockRating.RatingTo,
 		stockRating.TargetFrom,
 		stockRating.TargetTo,
-		stockRating.Time)
+		stockRating.Time,
+		stockRating.TargetPriceChange)
 
 	if err != nil {
 		slog.Error("error saving stock rating", "error", err)

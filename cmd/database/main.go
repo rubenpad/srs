@@ -11,7 +11,7 @@ import (
 )
 
 type config struct {
-	Database         string
+	Database         string `required:"true"`
 	DatabaseHost     string `required:"true" split_words:"true"`
 	DatabaseUser     string `required:"true" split_words:"true"`
 	DatabasePort     uint   `required:"true" split_words:"true"`
@@ -20,7 +20,7 @@ type config struct {
 
 func main() {
 	var configuration config
-	err := envconfig.Process("SRI", &configuration)
+	err := envconfig.Process("SRS", &configuration)
 	if err != nil {
 		log.Fatal("error getting database configuration values")
 	}

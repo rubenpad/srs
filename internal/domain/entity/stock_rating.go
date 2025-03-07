@@ -1,17 +1,22 @@
 package entity
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type StockRating struct {
-	Brokerage  string `json:"brokerage"`
-	Action     string `json:"action"`
-	Company    string `json:"company"`
-	Ticker     string `json:"ticker"`
-	RatingFrom string `json:"rating_from"`
-	RatingTo   string `json:"rating_to"`
-	TargetFrom string `json:"target_from"`
-	TargetTo   string `json:"target_to"`
-	Time       string `json:"time"`
+	Id                string    `json:"id"`
+	Brokerage         string    `json:"brokerage"`
+	Action            string    `json:"action"`
+	Company           string    `json:"company"`
+	Ticker            string    `json:"ticker"`
+	RatingFrom        string    `json:"rating_from"`
+	RatingTo          string    `json:"rating_to"`
+	TargetFrom        string    `json:"target_from"`
+	TargetTo          string    `json:"target_to"`
+	Time              time.Time `json:"time"`
+	TargetPriceChange float64   `json:"target_price_change"`
 }
 
 type IStockRatingApi interface {
@@ -23,16 +28,17 @@ type IStockRatingRepository interface {
 	GetStockRatings(ctx context.Context, limit int, offset int) ([]StockRating, error)
 }
 
-func NewStockRating(brokerage, action, company, ticker, ratingFrom, ratingTo, targetFrom, targetTo, time string) StockRating {
+func NewStockRating(brokerage, action, company, ticker, ratingFrom, ratingTo, targetFrom, targetTo string, time time.Time, targetPriceChange float64) StockRating {
 	return StockRating{
-		Brokerage:  brokerage,
-		Action:     action,
-		Company:    company,
-		Ticker:     ticker,
-		RatingFrom: ratingFrom,
-		RatingTo:   ratingTo,
-		TargetFrom: targetFrom,
-		TargetTo:   targetTo,
-		Time:       time,
+		Brokerage:         brokerage,
+		Action:            action,
+		Company:           company,
+		Ticker:            ticker,
+		RatingFrom:        ratingFrom,
+		RatingTo:          ratingTo,
+		TargetFrom:        targetFrom,
+		TargetTo:          targetTo,
+		Time:              time,
+		TargetPriceChange: targetPriceChange,
 	}
 }
