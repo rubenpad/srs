@@ -18,6 +18,7 @@ import (
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/stock"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/logging"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/storage/cockroach"
+	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 )
 
 type Server struct {
@@ -39,7 +40,7 @@ func New(ctx context.Context, host string, port uint, shutdownTimeout time.Durat
 }
 
 func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
-	s.engine.Use(gin.Recovery(), logging.Middleware())
+	s.engine.Use(gin.Recovery(), logging.Middleware(), pagination.New())
 
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)
 	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, api.NewStockRatingApi()))

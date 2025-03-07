@@ -21,8 +21,8 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 	}
 }
 
-func (s StockRatingService) GetStockRatings(ctx context.Context, limit int, offset int) ([]entity.StockRating, error) {
-	return s.stockRatingRepository.GetStockRatings(ctx, limit, offset)
+func (s StockRatingService) GetStockRatings(ctx context.Context, page int, size int) ([]entity.StockRating, error) {
+	return s.stockRatingRepository.GetStockRatings(ctx, size, (page-1)*size)
 }
 
 func (s StockRatingService) GetStockRecommendations(ctx context.Context, limit int) ([]entity.StockRatingAggregate, error) {
