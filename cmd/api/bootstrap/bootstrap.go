@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server"
-
+	_ "github.com/golang-migrate/migrate/v4/database/cockroachdb"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server"
 )
 
 type config struct {
@@ -18,9 +19,10 @@ type config struct {
 	ShutdownTimeout time.Duration `default:"10s"`
 	// Database configuration
 	Database         string
-	DatabaseHost     string
-	DatabaseUser     string
-	DatabasePassword string
+	DatabaseHost     string `required:"true" split_words:"true"`
+	DatabaseUser     string `required:"true" split_words:"true"`
+	DatabasePort     uint   `required:"true" split_words:"true"`
+	DatabasePassword string `required:"true" split_words:"true"`
 }
 
 func Run() error {
@@ -30,14 +32,11 @@ func Run() error {
 		return err
 	}
 
-	connectionString := fmt.Sprintf("%s:%s@%s:%d/%s", configuration.DatabaseUser, configuration.DatabasePassword, configuration.Host, configuration.Port, configuration.Database)
-	connectionPoolConfig, err := pgxpool.ParseConfig(connectionString + "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s")
-	if err != nil {
-		return fmt.Errorf("failed to parse connection pool config: %v", err)
-	}
+	connectionParams := "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s"
+	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", configuration.DatabaseUser, configuration.DatabasePassword, configuration.DatabaseHost, configuration.DatabasePort, configuration.Database) + connectionParams
 
 	connectionPoolContext := context.Background()
-	connectionPool, configError := pgxpool.NewWithConfig(connectionPoolContext, connectionPoolConfig)
+	connectionPool, configError := pgxpool.New(connectionPoolContext, connectionString)
 
 	if err := connectionPool.Ping(connectionPoolContext); err != nil || configError != nil {
 		return fmt.Errorf("failed to create connection pool: %v", err)
