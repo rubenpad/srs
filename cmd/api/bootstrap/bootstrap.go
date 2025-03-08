@@ -15,8 +15,6 @@ import (
 
 type config struct {
 	// Server configuration
-	Host            string        `default:"localhost"`
-	Port            uint          `default:"8080"`
 	ShutdownTimeout time.Duration `default:"10s"`
 	// Database configuration
 	Database         string
@@ -46,7 +44,7 @@ func Run() error {
 	defer connectionPool.Close()
 
 	logging.Set()
-	ctx, srv := server.New(context.Background(), configuration.Host, configuration.Port, configuration.ShutdownTimeout, connectionPool)
+	ctx, srv := server.New(context.Background(), "0.0.0.0", 8080, configuration.ShutdownTimeout, connectionPool)
 
 	return srv.Run(ctx)
 }

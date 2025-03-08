@@ -1,0 +1,18 @@
+replicaCount: 2
+
+image:
+  tag: latest
+  repository: rubenpad/srs
+  pullPolicy: IfNotPresent
+
+service:
+  port: 8080
+  type: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
