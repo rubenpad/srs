@@ -40,7 +40,15 @@ func New(ctx context.Context, host string, port uint, shutdownTimeout time.Durat
 }
 
 func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
-	s.engine.Use(gin.Recovery(), logging.Middleware(), pagination.New())
+	paginator := pagination.New(
+		pagination.WithPageText("page"),
+		pagination.WithSizeText("pageSize"),
+		pagination.WithDefaultPage(1),
+		pagination.WithDefaultPageSize(10),
+		pagination.WithMinPageSize(1),
+		pagination.WithMaxPageSize(100))
+
+	s.engine.Use(gin.Recovery(), logging.Middleware(), paginator)
 
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)
 	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, api.NewStockRatingApi()))

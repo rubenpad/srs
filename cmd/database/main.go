@@ -35,7 +35,12 @@ func main() {
 	}
 
 	if err := migration.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal("error executing migrations", err)
+
+		if downErr := migration.Down(); downErr != nil {
+			log.Fatal("error executing up & down migrations")
+		}
+
+		log.Fatal("error executing up migrations", err)
 	}
 
 	log.Println("migrations executed successfully")

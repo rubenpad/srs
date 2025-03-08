@@ -42,7 +42,15 @@ func NewStockRatingRepository(pool *pgxpool.Pool) *StockRatingRepository {
 }
 
 func (srr *StockRatingRepository) GetStockRatings(context context.Context, limit int, offset int) ([]entity.StockRating, error) {
-	rows, err := srr.pool.Query(context, "SELECT * FROM stock_rating")
+	query := `
+		SELECT *
+		FROM stock_rating
+		LIMIT @limit
+		OFFSET @offset
+	`
+
+	args := pgx.NamedArgs{"limit": limit, "offset": offset}
+	rows, err := srr.pool.Query(context, query, args)
 
 	if err != nil {
 		errorMessage := "error getting stock ratings"
@@ -108,49 +116,27 @@ func (srr *StockRatingRepository) BatchSave(ctx context.Context, stockRatings []
 
 func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, limit int) ([]entity.StockRatingAggregate, error) {
 	query := `
-		WITH latest_stock_ratings AS (
-			SELECT
+		WITH latest_stock_ratings AS
+  		(SELECT
+			ticker,
+          	MAX(time) AS "time",
+          	COUNT(CASE WHEN rating_to IN ('Strong-Buy', 'Buy', 'Top Pick', 'Positive', 'Outperform', 'Outperformer', 'Market Outperform', 'Sector Outperform') THEN 1 ELSE NULL END) AS strong_buy_ratings,
+          	COUNT(CASE WHEN rating_to IN ('Overweight', 'Equal Weight', 'Sector Weight', 'Peer Perform', 'In-Line', 'Inline') THEN 1 ELSE NULL END) AS buy_ratings,
+          	COUNT(CASE WHEN rating_to IN ('Neutral', 'Market Perform', 'Sector Perform', 'Hold') THEN 1 ELSE NULL END) AS hold_ratings,
+          	COUNT(CASE WHEN rating_to IN ('Sell', 'Reduce', 'Negative', 'Underweight', 'Underperform', 'Sector Underperform') THEN 1 ELSE NULL END) AS sell_ratings
+   		FROM (SELECT
 				ticker,
-				MAX(time) AS time,
-				COUNT(CASE WHEN rating_to IN (
-						'Strong-Buy',
-						'Buy',
-						'Top Pick',
-						'Positive',
-						'Outperform',
-						'Outperformer',
-						'Market Outperform',
-						'Sector Outperform',
-						'Market Outperform') THEN 1) AS strong_buy_rating,
-				COUNT(CASE WHEN rating_to IN (
-						'Overweight',
-						'Equal Weight',
-						'Sector Weight',
-						'Peer Perform',
-						'In-Line',
-						'Inline') THEN 1) AS buy_rating,
-				COUNT(CASE WHEN rating_to IN (
-						'Neutral',
-						'Market Perform',
-						'Sector Perform',
-						'Hold') THEN 1) AS hold_ratings,
-				COUNT(CASE WHEN rating_to IN (
-						'Sell'
-						'Reduce',
-						'Negative',
-						'Underweight',
-						'Underperform',
-						'Sector Underperform') THEN 1) AS sell_ratings
-			FROM (SELECT
-					ticker,
-					brokerage,
-					rating_to,
-					time,
-					ROW_NUMBER() OVER (PARTITION BY ticker, brokerage ORDER BY time DESC) AS rn
-				FROM stock_rating) AS ranked_stock_ratings
-			WHERE rn <= @limit
-			GROUP BY ticker)
-		SELECT * FROM latest_stock_ratings	
+             	brokerage,
+             	rating_to,
+             	time,
+             	ROW_NUMBER() OVER (PARTITION BY ticker, brokerage ORDER BY time DESC) AS rn
+      		FROM stock_rating) AS ranked_stock_ratings
+   		WHERE rn <= 5
+   		GROUP BY ticker)
+		SELECT *
+		FROM latest_stock_ratings
+		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, time DESC
+		LIMIT @limit;	
 	`
 
 	args := pgx.NamedArgs{

@@ -15,6 +15,6 @@ CREATE TABLE IF NOT EXISTS stock_rating (
     CONSTRAINT unique_record UNIQUE (brokerage, ticker, time)
 );
 
-CREATE INDEX idx_stock_rating_ticker_brokerage_time ON stock_rating (ticker, brokerage, time DESC)
+CREATE INDEX idx_stock_rating_ticker_brokerage_time ON stock_rating (ticker, brokerage, time DESC);
 
 COMMIT;

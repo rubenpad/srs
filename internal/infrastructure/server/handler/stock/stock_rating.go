@@ -1,6 +1,7 @@
 package stock
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/service"
@@ -18,24 +19,11 @@ func NewStockRatingController(stockRatingService service.StockRatingService) *St
 
 func (src *StockRatingController) GetStockRatings(ctx *gin.Context) {
 	page := ctx.GetInt("page")
-	size := ctx.GetInt("size")
+	pageSize := ctx.GetInt("pageSize")
 
-	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, page, size)
+	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, page, pageSize)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"code":    "internal_server_error",
-			"message": "error processing the request",
-		})
-		return
-	}
-
-	ctx.Header("Cache-Control", "private, max-age=86400")
-	ctx.JSON(http.StatusOK, stockRatings)
-}
-
-func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
-	stockRecommendations, err := src.stockRatingService.GetStockRecommendations(ctx, ctx.GetInt("size"))
-	if err != nil {
+		slog.Error(err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"code":    "internal_server_error",
 			"message": "error processing the request",
@@ -44,6 +32,21 @@ func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
 	}
 
 	ctx.Header("Cache-Control", "private, max-age=900")
+	ctx.JSON(http.StatusOK, stockRatings)
+}
+
+func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
+	stockRecommendations, err := src.stockRatingService.GetStockRecommendations(ctx, ctx.GetInt("pageSize"))
+	if err != nil {
+		slog.Error(err.Error())
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal_server_error",
+			"message": "error processing the request",
+		})
+		return
+	}
+
+	ctx.Header("Cache-Control", "private, max-age=86400")
 	ctx.JSON(http.StatusOK, stockRecommendations)
 }
 

@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
@@ -31,6 +33,7 @@ func (s StockRatingService) GetStockRecommendations(ctx context.Context, limit i
 
 func (s StockRatingService) LoadStockRatingsData(ctx context.Context) {
 	slog.Info("process to load stock ratings started")
+	start := time.Now()
 	nextPage := ""
 
 	for {
@@ -67,8 +70,12 @@ func (s StockRatingService) LoadStockRatingsData(ctx context.Context) {
 			break
 		}
 	}
-
-	slog.Info("process to load stock ratings finished")
+	elapsed := time.Since(start)
+	minutes := int(elapsed.Minutes())
+	seconds := int(elapsed.Seconds()) % 60
+	milliseconds := int(elapsed.Milliseconds()) % 1000
+	duration := fmt.Sprintf("%dm %ds %dms", minutes, seconds, milliseconds)
+	slog.Info("process to load stock ratings finished", "duration", duration)
 }
 
 func calculatePriceTargetChange(rawTargetFrom, rawTargetTo string) float64 {
