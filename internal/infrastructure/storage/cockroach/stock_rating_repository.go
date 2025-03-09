@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
@@ -41,15 +42,26 @@ func NewStockRatingRepository(pool *pgxpool.Pool) *StockRatingRepository {
 	return &StockRatingRepository{pool}
 }
 
-func (srr *StockRatingRepository) GetStockRatings(context context.Context, limit int, offset int) ([]entity.StockRating, error) {
+func (srr *StockRatingRepository) GetStockRatings(context context.Context, nextPage string, pageSize int) ([]entity.StockRating, error) {
 	query := `
-		SELECT *
-		FROM stock_rating
-		LIMIT @limit
-		OFFSET @offset
+        SELECT 
+            brokerage,
+            action,
+            company,
+            ticker,
+            rating_from,
+            rating_to,
+            target_from,
+            target_to,
+            time,
+            target_price_change
+        FROM stock_rating
+        WHERE (@nextPage = '' OR ticker > @nextPage)
+        ORDER BY ticker ASC
+        LIMIT @pageSize
 	`
 
-	args := pgx.NamedArgs{"limit": limit, "offset": offset}
+	args := pgx.NamedArgs{"nextPage": nextPage, "pageSize": pageSize}
 	rows, err := srr.pool.Query(context, query, args)
 
 	if err != nil {
@@ -105,16 +117,25 @@ func (srr *StockRatingRepository) BatchSave(ctx context.Context, stockRatings []
 	results := srr.pool.SendBatch(ctx, batch)
 	defer results.Close()
 
-	for range stockRatings {
+	for _, stockRating := range stockRatings {
 		_, err := results.Exec()
 
 		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				slog.Info(
+					"skipping duplicate stock rating - probably running the load data again",
+					"constraint", pgErr.ConstraintName,
+					"data", stockRating,
+				)
+				continue
+			}
 			slog.Error("error saving stock rating", "error", err)
 		}
 	}
 }
 
-func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, limit int) ([]entity.StockRatingAggregate, error) {
+func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, pageSize int) ([]entity.StockRatingAggregate, error) {
 	query := `
 		WITH latest_stock_ratings AS
   		(SELECT
@@ -133,14 +154,20 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, l
       		FROM stock_rating) AS ranked_stock_ratings
    		WHERE rn <= 5
    		GROUP BY ticker)
-		SELECT *
+		SELECT
+			ticker,
+			time,
+			strong_buy_ratings,
+			buy_ratings,
+			hold_ratings,
+			sell_ratings
 		FROM latest_stock_ratings
 		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, time DESC
-		LIMIT @limit;	
+		LIMIT @pageSize;	
 	`
 
 	args := pgx.NamedArgs{
-		"limit": limit,
+		"pageSize": pageSize,
 	}
 
 	rows, err := ssr.pool.Query(ctx, query, args)

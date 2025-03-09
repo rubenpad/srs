@@ -34,8 +34,8 @@ type IStockRatingApi interface {
 type IStockRatingRepository interface {
 	Save(ctx context.Context, stock StockRating)
 	BatchSave(ctx context.Context, stockRatings []StockRating)
-	GetStockRatings(ctx context.Context, limit int, offset int) ([]StockRating, error)
-	GetStockRecommendations(ctx context.Context, limit int) ([]StockRatingAggregate, error)
+	GetStockRatings(ctx context.Context, nextPage string, pageSize int) ([]StockRating, error)
+	GetStockRecommendations(ctx context.Context, pageSize int) ([]StockRatingAggregate, error)
 }
 
 func NewStockRating(brokerage, action, company, ticker, ratingFrom, ratingTo, targetFrom, targetTo string, time time.Time, targetPriceChange float64) StockRating {

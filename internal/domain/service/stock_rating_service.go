@@ -6,32 +6,71 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 )
 
+type serviceResponse[T any] struct {
+	Data     []T    `json:"data"`
+	NextPage string `json:"nextPage"`
+}
+
 type StockRatingService struct {
 	stockRatingRepository entity.IStockRatingRepository
 	stockRatingApi        entity.IStockRatingApi
+	isLoading             atomic.Bool
 }
 
-func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, stockRatingApi entity.IStockRatingApi) StockRatingService {
-	return StockRatingService{
+func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, stockRatingApi entity.IStockRatingApi) *StockRatingService {
+	return &StockRatingService{
 		stockRatingApi:        stockRatingApi,
 		stockRatingRepository: stockRatingRepository,
 	}
 }
 
-func (s StockRatingService) GetStockRatings(ctx context.Context, page int, size int) ([]entity.StockRating, error) {
-	return s.stockRatingRepository.GetStockRatings(ctx, size, (page-1)*size)
+func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int) (*serviceResponse[entity.StockRating], error) {
+	stockRatings, err := s.stockRatingRepository.GetStockRatings(ctx, nextPage, pageSize)
+
+	if err != nil {
+		return nil, err
+	}
+
+	nNextPage := ""
+	responseSize := len(stockRatings)
+	if responseSize > 0 {
+		lastItem := stockRatings[responseSize-1]
+		nNextPage = lastItem.Ticker
+	}
+
+	return &serviceResponse[entity.StockRating]{
+		Data:     stockRatings,
+		NextPage: nNextPage,
+	}, nil
 }
 
-func (s StockRatingService) GetStockRecommendations(ctx context.Context, limit int) ([]entity.StockRatingAggregate, error) {
-	return s.stockRatingRepository.GetStockRecommendations(ctx, limit)
+func (s *StockRatingService) GetStockRecommendations(ctx context.Context, pageSize int) (*serviceResponse[entity.StockRatingAggregate], error) {
+	recommendations, err := s.stockRatingRepository.GetStockRecommendations(ctx, pageSize)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &serviceResponse[entity.StockRatingAggregate]{
+		Data:     recommendations,
+		NextPage: "",
+	}, nil
 }
 
-func (s StockRatingService) LoadStockRatingsData(ctx context.Context) {
+func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
+	if !s.isLoading.CompareAndSwap(false, true) {
+		slog.Info("load stock ratings process already running")
+		return
+	}
+
+	defer s.isLoading.Store(false)
+
 	slog.Info("process to load stock ratings started")
 	start := time.Now()
 	nextPage := ""
@@ -86,5 +125,5 @@ func calculatePriceTargetChange(rawTargetFrom, rawTargetTo string) float64 {
 		return 0
 	}
 
-	return (targetFrom - targetTo) / targetFrom * 100
+	return (targetTo - targetFrom) / targetTo
 }

@@ -1,3 +1,1 @@
-BEGIN;
 DROP TABLE IF EXISTS stock_rating;
-COMMIT;

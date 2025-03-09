@@ -5,23 +5,24 @@ import (
 	"net/http"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/service"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/pagination"
 
 	"github.com/gin-gonic/gin"
 )
 
 type StockRatingController struct {
-	stockRatingService service.StockRatingService
+	stockRatingService *service.StockRatingService
 }
 
-func NewStockRatingController(stockRatingService service.StockRatingService) *StockRatingController {
+func NewStockRatingController(stockRatingService *service.StockRatingService) *StockRatingController {
 	return &StockRatingController{stockRatingService}
 }
 
 func (src *StockRatingController) GetStockRatings(ctx *gin.Context) {
-	page := ctx.GetInt("page")
-	pageSize := ctx.GetInt("pageSize")
+	nextPage := ctx.GetString(pagination.NextPageKey)
+	pageSize := ctx.GetInt(pagination.PageSizeKey)
 
-	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, page, pageSize)
+	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, nextPage, pageSize)
 	if err != nil {
 		slog.Error(err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{
@@ -36,7 +37,9 @@ func (src *StockRatingController) GetStockRatings(ctx *gin.Context) {
 }
 
 func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
-	stockRecommendations, err := src.stockRatingService.GetStockRecommendations(ctx, ctx.GetInt("pageSize"))
+	pageSize := ctx.GetInt(pagination.PageSizeKey)
+
+	stockRecommendations, err := src.stockRatingService.GetStockRecommendations(ctx, pageSize)
 	if err != nil {
 		slog.Error(err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{

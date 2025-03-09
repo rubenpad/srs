@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/cockroachdb"
@@ -19,6 +20,9 @@ type config struct {
 }
 
 func main() {
+	log.Println("migrations process started")
+	start := time.Now()
+
 	var configuration config
 	err := envconfig.Process("SRS", &configuration)
 	if err != nil {
@@ -43,5 +47,9 @@ func main() {
 		log.Fatal("error executing up migrations", err)
 	}
 
-	log.Println("migrations executed successfully")
+	elapsed := time.Since(start)
+	minutes := int(elapsed.Minutes())
+	seconds := int(elapsed.Seconds()) % 60
+	milliseconds := int(elapsed.Milliseconds()) % 1000
+	log.Printf("migrations executed successfully: %dm %ds %dms", minutes, seconds, milliseconds)
 }
