@@ -31,7 +31,8 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 }
 
 func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) (*serviceResponse[entity.StockRating], error) {
-	stockRatings, err := s.stockRatingRepository.GetStockRatings(ctx, nextPage, pageSize, search)
+	pageSizePlusOne := pageSize + 1
+	stockRatings, err := s.stockRatingRepository.GetStockRatings(ctx, nextPage, pageSizePlusOne, search)
 
 	if err != nil {
 		return nil, err
@@ -39,9 +40,12 @@ func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage strin
 
 	nNextPage := ""
 	responseSize := len(stockRatings)
-	if responseSize > 0 {
-		lastItem := stockRatings[responseSize-1]
-		nNextPage = lastItem.Ticker
+	existsMoreItems := responseSize == pageSizePlusOne
+
+	if responseSize > 0 && existsMoreItems {
+		lastItemCurrentPage := stockRatings[responseSize-2]
+		nNextPage = lastItemCurrentPage.Ticker
+
 	}
 
 	return &serviceResponse[entity.StockRating]{
