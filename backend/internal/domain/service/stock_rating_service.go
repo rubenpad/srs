@@ -17,10 +17,15 @@ type serviceResponse[T any] struct {
 	NextPage string `json:"nextPage"`
 }
 
+type stockDetailsResponse struct {
+	recommendations []interface{}
+	quotes          []interface{}
+}
+
 type StockRatingService struct {
-	stockRatingRepository entity.IStockRatingRepository
-	stockRatingApi        entity.IStockRatingApi
 	isLoading             atomic.Bool
+	stockRatingApi        entity.IStockRatingApi
+	stockRatingRepository entity.IStockRatingRepository
 }
 
 func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, stockRatingApi entity.IStockRatingApi) *StockRatingService {
@@ -28,6 +33,10 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 		stockRatingApi:        stockRatingApi,
 		stockRatingRepository: stockRatingRepository,
 	}
+}
+
+func (s *StockRatingService) GetStockDetails(ctx context.Context, ticker string) any {
+	return s.stockRatingApi.GetStockDetails(ctx, ticker)
 }
 
 func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) (*serviceResponse[entity.StockRating], error) {

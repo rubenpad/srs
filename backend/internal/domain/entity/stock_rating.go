@@ -29,8 +29,14 @@ type StockRatingAggregate struct {
 	TargetPriceChange float64   `json:"target_price_change"`
 }
 
+type StockDetails struct {
+	Quote           *any   `json:"quote"`
+	Recommendations *[]any `json:"recommendations"`
+}
+
 type IStockRatingApi interface {
 	GetStockRatings(ctx context.Context, nextPage string) ([]StockRating, string, error)
+	GetStockDetails(ctx context.Context, ticker string) *any
 }
 
 type IStockRatingRepository interface {

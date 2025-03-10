@@ -49,12 +49,14 @@ func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 	)
 
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)
-	stockRatingController := stock.NewStockRatingController(service.NewStockRatingService(stockRatingRepository, api.NewStockRatingApi()))
+	stockRatingService := service.NewStockRatingService(stockRatingRepository, api.NewStockRatingApi())
+	stockRatingController := stock.NewStockRatingController(stockRatingService)
 
 	s.engine.GET("/api/health", health.HealthCheck)
 	s.engine.GET("/api/stock-ratings", stockRatingController.GetStockRatings)
 	s.engine.POST("/api/stock-ratings-data", stockRatingController.LoadStockRatingData)
 	s.engine.GET("/api/stock-recommendations", stockRatingController.GetStockRecommendations)
+	s.engine.GET("/api/stock-details/:ticker", stockRatingController.GetStockDetails)
 }
 
 func (s *Server) Run(ctx context.Context) error {

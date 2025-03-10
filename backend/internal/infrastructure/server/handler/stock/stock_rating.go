@@ -19,6 +19,22 @@ func NewStockRatingController(stockRatingService *service.StockRatingService) *S
 	return &StockRatingController{stockRatingService}
 }
 
+func (src *StockRatingController) GetStockDetails(ctx *gin.Context) {
+	ticker := ctx.Param("ticker")
+
+	stockDetails, err := src.stockRatingService.GetStockDetails(ctx, ticker)
+	if err != nil {
+		slog.Error(err.Error())
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal_server_error",
+			"message": "error processing the request",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, stockDetails)
+}
+
 func (src *StockRatingController) GetStockRatings(ctx *gin.Context) {
 	search := ctx.GetString(search.SearchKey)
 	nextPage := ctx.GetString(pagination.NextPageKey)
