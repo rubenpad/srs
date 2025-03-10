@@ -142,15 +142,27 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
   		(SELECT
 			ticker,
           	MAX(time) AS "time",
+			AVG(target_price_change) as avg_price_change,
+
           	COUNT(CASE WHEN rating_to IN ('Strong-Buy', 'Buy', 'Top Pick', 'Positive', 'Outperform', 'Outperformer', 'Market Outperform', 'Sector Outperform') THEN 1 ELSE NULL END) AS strong_buy_ratings,
           	COUNT(CASE WHEN rating_to IN ('Overweight', 'Equal Weight', 'Sector Weight', 'Peer Perform', 'In-Line', 'Inline') THEN 1 ELSE NULL END) AS buy_ratings,
           	COUNT(CASE WHEN rating_to IN ('Neutral', 'Market Perform', 'Sector Perform', 'Hold') THEN 1 ELSE NULL END) AS hold_ratings,
-          	COUNT(CASE WHEN rating_to IN ('Sell', 'Reduce', 'Negative', 'Underweight', 'Underperform', 'Sector Underperform') THEN 1 ELSE NULL END) AS sell_ratings
+          	COUNT(CASE WHEN rating_to IN ('Sell', 'Reduce', 'Negative', 'Underweight', 'Underperform', 'Sector Underperform') THEN 1 ELSE NULL END) AS sell_ratings,
+
+			ROUND(AVG(
+				CASE
+					WHEN rating_to IN ('Strong-Buy', 'Buy', 'Top Pick', 'Positive', 'Outperform', 'Outperformer', 'Market Outperform', 'Sector Outperform') THEN 5
+          			WHEN rating_to IN ('Overweight', 'Equal Weight', 'Sector Weight', 'Peer Perform', 'In-Line', 'Inline') THEN 4
+          			WHEN rating_to IN ('Neutral', 'Market Perform', 'Sector Perform', 'Hold') THEN 3
+          			WHEN rating_to IN ('Sell', 'Reduce', 'Negative', 'Underweight', 'Underperform', 'Sector Underperform') THEN 2
+				END), 1) as rating
+
    		FROM (SELECT
 				ticker,
              	brokerage,
              	rating_to,
              	time,
+				target_price_change,
              	ROW_NUMBER() OVER (PARTITION BY ticker, brokerage ORDER BY time DESC) AS rn
       		FROM stock_rating) AS ranked_stock_ratings
    		WHERE rn <= 5
@@ -161,9 +173,17 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
 			strong_buy_ratings,
 			buy_ratings,
 			hold_ratings,
-			sell_ratings
+			sell_ratings,
+			ROUND(avg_price_change * 100, 2) as target_price_change,
+			(CASE
+				WHEN rating BETWEEN 4.5 AND 5 THEN 'Strong Buy'
+				WHEN rating BETWEEN 3.5 AND 4.4 THEN 'Buy'
+				WHEN rating BETWEEN 2.5 AND 3.4 THEN 'Hold'
+				WHEN rating BETWEEN 1.5 AND 2.4 THEN 'Sell'
+				WHEN rating BETWEEN 1.0 AND 1.4 THEN 'Strong Sell'
+			END) as rating
 		FROM latest_stock_ratings
-		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, time DESC
+		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, target_price_change DESC, time DESC
 		LIMIT @pageSize;	
 	`
 

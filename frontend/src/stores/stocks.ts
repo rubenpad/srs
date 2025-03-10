@@ -1,7 +1,7 @@
 import axios from "axios";
 import { defineStore } from 'pinia'
 
-import type { StockRating } from "@/domain/stock";
+import type { StockRating, StockRecommendation } from "@/domain/stock";
 
 export const useStore = defineStore("stocks", {
   state: () => ({
@@ -9,8 +9,8 @@ export const useStore = defineStore("stocks", {
     hasMoreStockRatings: true,
     stockRatingsPageSize: 10,
     stockRatings: [] as Array<StockRating>,
+    stockRecommendations: [] as Array<StockRecommendation>,
     stockDetails: {} as Record<string, object>,
-    stockRecommendations: [],
   }),
 
   actions: {

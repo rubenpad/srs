@@ -20,8 +20,14 @@ onMounted(async () => {
                         <RouterLink :to="`/stock/${stock.ticker}`">
                             <h5 class="mb-0 self-center font-bold">
                                 {{ stock.ticker }}
+                                <span :class="['leading-normal text-sm font-weight-bolder', stock.target_price_change >=
+                                    0 ? 'text-lime-500' : 'text-red-500'
+                                ]">{{ `${(stock.target_price_change > 0 ? '+' : '') + stock.target_price_change}%`
+                                    }}</span>
                             </h5>
-                            <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">{{  stock.rating || 'Buy' }}</span>
+                            <span
+                                class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-green-600/20 ring-inset">{{
+                                    stock.rating }}</span>
                         </RouterLink>
                     </div>
                 </div>

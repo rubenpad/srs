@@ -51,7 +51,6 @@ func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header("Cache-Control", "private, max-age=86400")
 	ctx.JSON(http.StatusOK, stockRecommendations)
 }
 

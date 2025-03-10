@@ -19,12 +19,14 @@ type StockRating struct {
 }
 
 type StockRatingAggregate struct {
-	Ticker           string    `json:"ticker"`
-	Time             time.Time `json:"time"`
-	StrongBuyRatings int       `json:"strong_buy_ratings"`
-	BuyRatings       int       `json:"buy_ratings"`
-	HoldRatings      int       `json:"hold_ratings"`
-	SellRatings      int       `json:"sell_ratings"`
+	Ticker            string    `json:"ticker"`
+	Time              time.Time `json:"time"`
+	StrongBuyRatings  int       `json:"strong_buy_ratings"`
+	BuyRatings        int       `json:"buy_ratings"`
+	HoldRatings       int       `json:"hold_ratings"`
+	SellRatings       int       `json:"sell_ratings"`
+	Rating            string    `json:"rating"`
+	TargetPriceChange float64   `json:"target_price_change"`
 }
 
 type IStockRatingApi interface {
