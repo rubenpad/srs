@@ -30,8 +30,8 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 	}
 }
 
-func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int) (*serviceResponse[entity.StockRating], error) {
-	stockRatings, err := s.stockRatingRepository.GetStockRatings(ctx, nextPage, pageSize)
+func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) (*serviceResponse[entity.StockRating], error) {
+	stockRatings, err := s.stockRatingRepository.GetStockRatings(ctx, nextPage, pageSize, search)
 
 	if err != nil {
 		return nil, err
@@ -58,8 +58,7 @@ func (s *StockRatingService) GetStockRecommendations(ctx context.Context, pageSi
 	}
 
 	return &serviceResponse[entity.StockRatingAggregate]{
-		Data:     recommendations,
-		NextPage: "",
+		Data: recommendations,
 	}, nil
 }
 

@@ -42,7 +42,7 @@ func NewStockRatingRepository(pool *pgxpool.Pool) *StockRatingRepository {
 	return &StockRatingRepository{pool}
 }
 
-func (srr *StockRatingRepository) GetStockRatings(context context.Context, nextPage string, pageSize int) ([]entity.StockRating, error) {
+func (srr *StockRatingRepository) GetStockRatings(context context.Context, nextPage string, pageSize int, search string) ([]entity.StockRating, error) {
 	query := `
         SELECT 
             brokerage,
@@ -57,11 +57,12 @@ func (srr *StockRatingRepository) GetStockRatings(context context.Context, nextP
             target_price_change
         FROM stock_rating
         WHERE (@nextPage = '' OR ticker > @nextPage)
+		AND (@search = '' OR UPPER(ticker) BETWEEN UPPER(@search) AND CONCAT(UPPER(@search), 'ÿ'))
         ORDER BY ticker ASC
         LIMIT @pageSize
 	`
 
-	args := pgx.NamedArgs{"nextPage": nextPage, "pageSize": pageSize}
+	args := pgx.NamedArgs{"nextPage": nextPage, "pageSize": pageSize, "search": search}
 	rows, err := srr.pool.Query(context, query, args)
 
 	if err != nil {

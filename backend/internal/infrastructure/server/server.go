@@ -18,6 +18,7 @@ import (
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/stock"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/logging"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/pagination"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/search"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/storage/cockroach"
 )
 
@@ -44,6 +45,7 @@ func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 		gin.Recovery(),
 		logging.Middleware(),
 		pagination.Middleware(),
+		search.Middleware(),
 	)
 
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)

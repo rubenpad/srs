@@ -6,6 +6,7 @@ import (
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/service"
 	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/pagination"
+	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/search"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,10 +20,11 @@ func NewStockRatingController(stockRatingService *service.StockRatingService) *S
 }
 
 func (src *StockRatingController) GetStockRatings(ctx *gin.Context) {
+	search := ctx.GetString(search.SearchKey)
 	nextPage := ctx.GetString(pagination.NextPageKey)
 	pageSize := ctx.GetInt(pagination.PageSizeKey)
 
-	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, nextPage, pageSize)
+	stockRatings, err := src.stockRatingService.GetStockRatings(ctx, nextPage, pageSize, search)
 	if err != nil {
 		slog.Error(err.Error())
 		ctx.JSON(http.StatusInternalServerError, gin.H{
