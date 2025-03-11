@@ -71,62 +71,53 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                 </div>
                 <div class="flex-auto px-0 pt-0 pb-2">
                     <div class="p-0 overflow-x-auto ps">
-                        <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
-                            <thead class="align-bottom">
+
+                        <table class="min-w-full bg-white shadow-md overflow-hidden">
+                            <thead class="bg-gray-100">
                                 <tr>
                                     <th
-                                        class="px-3 py-3 font-bold text-left uppercase bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
-                                        Brokerage</th>
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Brokerage </th>
                                     <th
-                                        class="px-6 py-3 pl-2 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
-                                        Action</th>
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Action </th>
                                     <th
-                                        class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
-                                        Company</th>
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Company </th>
                                     <th
-                                        class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
-                                        Rating</th>
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Rating </th>
                                     <th
-                                        class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Price Target</th>
                                     <th
-                                        class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 shadow-none text-xxs border-b-solid tracking-none whitespace-nowrap text-slate-400 opacity-70">
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         % Price Change</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr v-for="stock in store.stockRatings" :key="stock.ticker" class="border-t">
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">{{ stock.brokerage }}</p>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr v-for="stock in store.stockRatings" :key="stock.ticker" class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.brokerage }}
                                     </td>
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">{{ stock.action }}</p>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.action }}
                                     </td>
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">
-                                            <RouterLink :to="`/stock/${stock.ticker}`"
-                                                class="text-blue-600 hover:text-blue-800 hover:underline">
-                                                {{ `${stock.company} (${stock.ticker})` }}
-                                            </RouterLink>
-                                        </p>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        <RouterLink :to="`/stock/${stock.ticker}`"
+                                            class="text-blue-600 hover:text-blue-800 hover:underline">
+                                            {{ `${stock.company} (${stock.ticker})` }}
+                                        </RouterLink>
                                     </td>
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">{{ `${stock.rating_from} ->
-                                            ${stock.rating_to}` }}</p>
-
-                                    </td>
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">{{ `${stock.target_from} ->
-                                            ${stock.target_to}` }}</p>
-                                    </td>
-                                    <td class="h-12 px-4 align-middle whitespace-nowrap">
-                                        <p class="mb-0 text-xs font-semibold leading-tight">{{
-                                            `${Number((stock.target_price_change * 100).toFixed(2))}%` }}</p>
-                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{
+                                        `${stock.rating_from} -> ${stock.rating_to}` }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{
+                                        `${stock.target_from} -> ${stock.target_to}` }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{
+                                        `${Number((stock.target_price_change * 100).toFixed(2))}%` }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+
                     <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
                         <div class="flex flex-1 justify-between sm:hidden">
                             <button @click="handlePageChange(PageAction.PREV)" :disabled="page === 1 || loading"

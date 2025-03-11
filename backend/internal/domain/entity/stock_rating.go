@@ -3,6 +3,8 @@ package entity
 import (
 	"context"
 	"time"
+
+	"github.com/Finnhub-Stock-API/finnhub-go/v2"
 )
 
 type StockRating struct {
@@ -30,13 +32,13 @@ type StockRatingAggregate struct {
 }
 
 type StockDetails struct {
-	Quote           *any   `json:"quote"`
-	Recommendations *[]any `json:"recommendations"`
+	Quote           *finnhub.Quote                 `json:"quote"`
+	Recommendations *[]finnhub.RecommendationTrend `json:"recommendations"`
 }
 
 type IStockRatingApi interface {
 	GetStockRatings(ctx context.Context, nextPage string) ([]StockRating, string, error)
-	GetStockDetails(ctx context.Context, ticker string) *any
+	GetStockDetails(ctx context.Context, ticker string) *StockDetails
 }
 
 type IStockRatingRepository interface {

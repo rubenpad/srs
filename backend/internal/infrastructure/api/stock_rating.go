@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
 
@@ -15,11 +16,6 @@ import (
 )
 
 const errorMessage = "there was an error while processing the stock ratings from external API"
-
-type finnhubResponse struct {
-	Quote           *finnhub.Quote                 `json:"quote"`
-	Recommendations *[]finnhub.RecommendationTrend `json:"recommendations"`
-}
 
 type stockRatingsDto struct {
 	NextPage string               `json:"next_page"`
@@ -78,29 +74,54 @@ func (s *StockRatingApi) GetStockRatings(ctx context.Context, nextPage string) (
 	return stockRatings.Items, stockRatings.NextPage, nil
 }
 
-func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *finnhubResponse {
+func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {
 	type result[T any] struct {
 		data T
 		err  error
 	}
 
-	quoteCh := make(chan result[*finnhub.Quote])
-	recommendationCh := make(chan result[*[]finnhub.RecommendationTrend])
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	quoteCh := make(chan result[finnhub.Quote])
+	recommendationCh := make(chan result[[]finnhub.RecommendationTrend])
+
+	defer close(quoteCh)
+	defer close(recommendationCh)
 
 	go func() {
-		data, _, err := s.finnhubClient.Quote(context.Background()).Symbol(ticker).Execute()
-		quoteCh <- result[*finnhub.Quote]{&data, err}
+		data, _, err := s.finnhubClient.Quote(ctx).Symbol(ticker).Execute()
+		select {
+		case <-ctx.Done():
+			return
+		case quoteCh <- result[finnhub.Quote]{data, err}:
+		}
 	}()
 
 	go func() {
-		data, _, err := s.finnhubClient.RecommendationTrends(context.Background()).Symbol(ticker).Execute()
-		recommendationCh <- result[*[]finnhub.RecommendationTrend]{&data, err}
+		data, _, err := s.finnhubClient.RecommendationTrends(ctx).Symbol(ticker).Execute()
+		select {
+		case <-ctx.Done():
+			return
+		case recommendationCh <- result[[]finnhub.RecommendationTrend]{data, err}:
+		}
 	}()
 
-	var quote *finnhub.Quote
-	var recommendations *[]finnhub.RecommendationTrend
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
+	var quote finnhub.Quote
+	var recommendations []finnhub.RecommendationTrend
 	for range 2 {
 		select {
+		case <-ctx.Done():
+			slog.Error("context cancelled", "error", ctx.Err())
+			return nil
+
+		case <-timer.C:
+			slog.Error("timeout getting stock details")
+			return nil
+
 		case res := <-quoteCh:
 			if res.err != nil {
 				slog.Error("error getting stock quote", "error", res.err)
@@ -117,8 +138,8 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *fi
 		}
 	}
 
-	return &finnhubResponse{
-		Quote:           quote,
-		Recommendations: recommendations,
+	return &entity.StockDetails{
+		Quote:           &quote,
+		Recommendations: &recommendations,
 	}
 }

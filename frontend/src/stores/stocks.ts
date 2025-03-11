@@ -1,16 +1,16 @@
 import axios from "axios";
 import { defineStore } from 'pinia'
 
-import type { StockRating, StockRecommendation } from "@/domain/stock";
+import type { IStockRating, IStockRecommendation, IStockDetails } from "@/domain/stock";
 
 export const useStore = defineStore("stocks", {
   state: () => ({
-    stockRatingsPages: new Map(),
-    hasMoreStockRatings: true,
+    stockDetails: new Map<string, IStockDetails>(),
     stockRatingsPageSize: 10,
-    stockRatings: [] as Array<StockRating>,
-    stockRecommendations: [] as Array<StockRecommendation>,
-    stockDetails: {} as Record<string, object>,
+    hasMoreStockRatings: true,
+    stockRatingsPages: new Map(),
+    stockRatings: [] as Array<IStockRating>,
+    stockRecommendations: [] as Array<IStockRecommendation>,
   }),
 
   actions: {
@@ -33,8 +33,11 @@ export const useStore = defineStore("stocks", {
     },
 
     async fetchStockDetails(ticker: string) {
-      const { data } = await axios.get(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}`);
-      this.stockDetails[ticker] = data.quoteResponse.result[0];
+      const maybeDetails = this.stockDetails.get(ticker)
+      if (maybeDetails !== undefined) return;
+
+      const response = await axios.get(`/api/stock-details/${ticker}`);
+      this.stockDetails.set(ticker, response.data)
     },
   },
 });

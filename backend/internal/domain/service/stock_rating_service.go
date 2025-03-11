@@ -17,11 +17,6 @@ type serviceResponse[T any] struct {
 	NextPage string `json:"nextPage"`
 }
 
-type stockDetailsResponse struct {
-	recommendations []interface{}
-	quotes          []interface{}
-}
-
 type StockRatingService struct {
 	isLoading             atomic.Bool
 	stockRatingApi        entity.IStockRatingApi
@@ -35,7 +30,7 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 	}
 }
 
-func (s *StockRatingService) GetStockDetails(ctx context.Context, ticker string) any {
+func (s *StockRatingService) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {
 	return s.stockRatingApi.GetStockDetails(ctx, ticker)
 }
 

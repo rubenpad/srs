@@ -22,16 +22,9 @@ func NewStockRatingController(stockRatingService *service.StockRatingService) *S
 func (src *StockRatingController) GetStockDetails(ctx *gin.Context) {
 	ticker := ctx.Param("ticker")
 
-	stockDetails, err := src.stockRatingService.GetStockDetails(ctx, ticker)
-	if err != nil {
-		slog.Error(err.Error())
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"code":    "internal_server_error",
-			"message": "error processing the request",
-		})
-		return
-	}
+	stockDetails := src.stockRatingService.GetStockDetails(ctx, ticker)
 
+	ctx.Header("Cache-Control", "private, max-age=900")
 	ctx.JSON(http.StatusOK, stockDetails)
 }
 
