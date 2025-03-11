@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "srs.name" . }}-nginx
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include      /etc/nginx/mime.types;
+      default_type application/octet-stream;
+
+      server {
+        listen      80;
+        listen      [::]:80 default_server;
+        server_name _;
+
+        root  /usr/share/nginx/html;
+        index index.html;
+
+        include /etc/nginx/default.d/*.conf;
+
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+
+        location ^~ /api {
+          proxy_pass http://localhost:8080;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        add_header X-Content-Type-Options nosniff;
+        add_header X-Frame-Options DENY;
+        add_header X-XSS-Protection "1; mode=block";
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'"; 
+        add_header Referrer-Policy "no-referrer-when-downgrade";
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=()";
+      }
+    }

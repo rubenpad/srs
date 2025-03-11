@@ -5,9 +5,29 @@ image:
   repository: rubenpad/srs
   pullPolicy: IfNotPresent
 
+nginx:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+fullnameOverride: ""
+
 service:
   port: 8080
   type: ClusterIP
+
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+  hosts:
+    - host: your_domain.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
 
 resources:
   limits:

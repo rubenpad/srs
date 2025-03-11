@@ -1,6 +1,5 @@
 apiVersion: v2
-name: stock-rating-system
-description: A Helm chart for Stock Rating System
-type: application
 version: 0.1.0
 appVersion: "1.0.0"
+name: srs
+description: A Helm chart for Stock Rating System

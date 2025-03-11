@@ -1,0 +1,4 @@
+./run-migrations
+./srs
+
+node_modules

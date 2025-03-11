@@ -1,19 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "srs.name" . }}
   labels:
-    app: {{ .Release.Name }}
+    app: {{ include "srs.name" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: {{ include "srs.name" . }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: {{ include "srs.name" . }}
     spec:
+      initContainers:
+        - name: init-static-files
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ['sh', '-c', 'cp -r /frontend/dist/* /usr/share/nginx/html']
+          volumeMounts:
+            - name: static-files
+              mountPath: /usr/share/nginx/html
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -34,4 +42,40 @@ spec:
               port: {{ .Values.service.port }}
             initialDelaySeconds: 60
           resources: {{- toYaml .Values.resources | nindent 12 }}
-          
+        - name: nginx
+          image: "{{ .Values.nginx.repository }}:{{ .Values.nginx.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          volumeMounts:
+            - name: static-files
+              mountPath: /usr/share/nginx/html
+            - name: {{ include "srs.name" . }}-nginx
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+      volumes:
+        - name: static-files
+          emptyDir: {}
+        - name: {{ include "srs.name" . }}-nginx
+          configMap:
+            name: {{ include "srs.name" . }}-nginx
