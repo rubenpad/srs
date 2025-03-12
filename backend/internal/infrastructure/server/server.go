@@ -30,6 +30,8 @@ type Server struct {
 }
 
 func New(ctx context.Context, host string, port uint, shutdownTimeout time.Duration, connectionPool *pgxpool.Pool) (context.Context, Server) {
+	gin.SetMode(gin.ReleaseMode)
+
 	server := Server{
 		engine:          gin.New(),
 		httpAddress:     fmt.Sprintf("%s:%d", host, port),

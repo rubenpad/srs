@@ -1,17 +1,19 @@
 export interface IStockRating {
-    brokerage: string
     action: string
     ticker: string
+    score: number;
     company: string
-    rating_from: string
+    brokerage: string
     rating_to: string,
-    target_from: string
     target_to: string
+    target_from: string
+    rating_from: string
     target_price_change: number
 }
 
 export interface IStockRecommendation {
     time: string
+    score: number
     rating: string
     ticker: string,
     buy_ratings: number,

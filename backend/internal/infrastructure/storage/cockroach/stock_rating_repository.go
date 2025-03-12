@@ -21,7 +21,8 @@ const insertQuery = `INSERT INTO stock_rating (
 				target_from,
 				target_to,
 				time,
-				target_price_change)
+				target_price_change,
+				score)
 			  VALUES (
 			  	@brokerage,
 				@action,
@@ -32,7 +33,8 @@ const insertQuery = `INSERT INTO stock_rating (
 				@target_from,
 				@target_to,
 				@time,
-				@target_price_change)`
+				@target_price_change,
+				@score)`
 
 type StockRatingRepository struct {
 	pool *pgxpool.Pool
@@ -54,7 +56,8 @@ func (srr *StockRatingRepository) GetStockRatings(context context.Context, nextP
             target_from,
             target_to,
             time,
-            target_price_change
+            target_price_change,
+			score
         FROM stock_rating
         WHERE (@nextPage = '' OR ticker > @nextPage)
 		AND (@search = '' OR UPPER(ticker) BETWEEN UPPER(@search) AND CONCAT(UPPER(@search), 'ÿ'))
@@ -110,6 +113,7 @@ func (srr *StockRatingRepository) BatchSave(ctx context.Context, stockRatings []
 			"target_to":           stockRating.TargetTo,
 			"time":                stockRating.Time,
 			"target_price_change": stockRating.TargetPriceChange,
+			"score":               stockRating.Score,
 		}
 
 		batch.Queue(insertQuery, args)
@@ -142,7 +146,8 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
   		(SELECT
 			ticker,
           	MAX(time) AS "time",
-			AVG(target_price_change) as avg_price_change,
+			AVG(target_price_change) AS avg_price_change,
+			AVG(score) AS score,
 
           	COUNT(CASE WHEN rating_to IN ('Strong-Buy', 'Buy', 'Top Pick', 'Positive', 'Outperform', 'Outperformer', 'Market Outperform', 'Sector Outperform') THEN 1 ELSE NULL END) AS strong_buy_ratings,
           	COUNT(CASE WHEN rating_to IN ('Overweight', 'Equal Weight', 'Sector Weight', 'Peer Perform', 'In-Line', 'Inline') THEN 1 ELSE NULL END) AS buy_ratings,
@@ -163,6 +168,7 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
              	rating_to,
              	time,
 				target_price_change,
+				score,
              	ROW_NUMBER() OVER (PARTITION BY ticker, brokerage ORDER BY time DESC) AS rn
       		FROM stock_rating) AS ranked_stock_ratings
    		WHERE rn <= 5
@@ -174,6 +180,7 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
 			buy_ratings,
 			hold_ratings,
 			sell_ratings,
+			score,
 			ROUND(avg_price_change * 100, 2) as target_price_change,
 			(CASE
 				WHEN rating BETWEEN 4.5 AND 5 THEN 'Strong Buy'
@@ -183,7 +190,7 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
 				WHEN rating BETWEEN 1.0 AND 1.4 THEN 'Strong Sell'
 			END) as rating
 		FROM latest_stock_ratings
-		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, target_price_change DESC, time DESC
+		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, target_price_change DESC, time DESC, score DESC
 		LIMIT @pageSize;	
 	`
 
