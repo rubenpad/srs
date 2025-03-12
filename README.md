@@ -4,7 +4,7 @@
 - [Rubén Padilla](https://github.com/rubenpad)   
   
 ## Overview  
-  This document outlines the design and implementation plan for a stock information system. The system retrieves stock data from an external API, format it, stores in a Cockroach database and provide APIs to dispose the information to a web application. The system will have an algorithm that analyses the input data and scores each stock to classify them as a potential recommendations to invest in.
+  This document outlines the design and implementation plan for a stock information system. The system retrieves stock data from an external API, format it, stores in a Cockroach database and provide APIs to dispose the information to a web application. The system will have an algorithm that analyses the input data and scores each stock to classify them as potential recommendations to invest in.
   
 ## Goals and Non-Goals  
 ### Goals  
@@ -60,7 +60,7 @@ Example:
 ```
 
 ### Stock analysis algorithm definition
-In this section we describe the elements used in the scoring and how they apply to the stock rating. Some elements are not standard and posible variations depend on the brokerage.
+In this section describes the elements used in the scoring and how they apply to the stock rating. Some elements are not standard and posible variations depend on the brokerage.
 
 The scoring for the stock recommendation system will be based on the next scale:
 
@@ -68,15 +68,15 @@ The scoring for the stock recommendation system will be based on the next scale:
 
 #### Key elements of the algorithm
 
-When the service fetchs the data it apply the scoring algorithm to determine the value of the `score` field.
+When the service fetchs the data it applies the scoring algorithm to determine the value of the `score` field. The final recommendations result will be calculated using a SQL query.
 
 ##### Table of weights
 |field|weight|description|
 |-----|------|-----------|
 |rating|50%|The system check if the rating was upgraded or downgraded based on the values of `rating_from` and `rating_to`. Upgrades get a greater score than downgrades.|
-|brokerage action|25%|Upgrades actions get a greater score than downgrades actions. `reiterated by` and `target set by` are special cases because depend on what is the new rating. Combination with bullish ratings get greater score than the bearish ones.|
+|brokerage action|25%|Upgrade actions get a greater score than downgrade actions. `reiterated by` and `target set by` are special cases because depend on what the new rating is. Combination with bullish ratings get greater score than the bearish ones.|
 |current target|15%|Bullish targets get better score than bearish ones.|
-|target price change|5%|Greate % price change add better score to the stock rating.|
+|target price change|5%|Greater % price change gets better score.|
 |report date|5%|Stocks with recent reports get better score.|
 
 #### Ratings by category
