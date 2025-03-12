@@ -11,6 +11,14 @@ const route = useRoute();
 const store = useStore();
 const ticker = route.params.ticker as string;
 
+const formatPrice = (price: number | undefined): string => {
+    if (price === undefined) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(price);
+};
+
 const recommendationData = computed(() => {
     const recommendations = (store.stockDetails.get(ticker)?.recommendations || []).reverse();
     return {
@@ -58,30 +66,28 @@ onMounted(() => store.fetchStockDetails(ticker));
 <template>
     <div class="p-4">
         <div v-if="store.stockDetails.get(ticker)" class="space-y-6">
-            <!-- Quote Card -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote`}}</h2>
+                <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote` }}</h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Current</p>
-                        <p class="text-xl font-bold">{{ store.stockDetails.get(ticker)?.quote?.c }}</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Previous Close</p>
-                        <p class="text-xl font-bold">{{ store.stockDetails.get(ticker)?.quote?.pc }}</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc) }}</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Open</p>
-                        <p class="text-xl font-bold">{{ store.stockDetails.get(ticker)?.quote?.o }}</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">High</p>
-                        <p class="text-xl font-bold">{{ store.stockDetails.get(ticker)?.quote?.h }}</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Recommendations Chart -->
             <div class="bg-white rounded-lg shadow p-6">
                 <div class="h-[400px]">
                     <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
