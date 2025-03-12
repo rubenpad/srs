@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/rubenpad/stock-rating-system/cmd/api/bootstrap"
+	"github.com/rubenpad/srs/cmd/api/bootstrap"
 )
 
 func main() {

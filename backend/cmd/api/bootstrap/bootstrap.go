@@ -9,8 +9,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/logging"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server"
+	"github.com/rubenpad/srs/internal/infrastructure/logging"
+	"github.com/rubenpad/srs/internal/infrastructure/server"
 )
 
 type config struct {

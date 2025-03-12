@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
+	"github.com/rubenpad/srs/internal/domain/entity"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
 )

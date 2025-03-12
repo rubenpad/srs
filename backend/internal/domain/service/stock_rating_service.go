@@ -9,22 +9,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rubenpad/stock-rating-system/internal/domain/entity"
+	"github.com/rubenpad/srs/internal/domain/entity"
 )
-
-const defaultItemsSize = 10
 
 const strongBuyRatingScore = 5
 const buyRatingScore = 4
 const holdRatingScore = 3
 const sellRatingScore = 2
 const strongSellRatingScore = 1
-
-const changeRatingScore = 3
-const currentRatingScore = 2
-
-const tenPercentPriceChangeScore = 2
-const thirtyPercentPriceChangeScore = 3
 
 const reportDateWeight = 5
 const ratingChangeWeight = 50
@@ -158,9 +150,9 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 			currentRatingScore := ratingScaleMap[rating.RatingTo]
 			ratingChangeScore := calculateRatingChangeScore(rating)
 			brokerageActionScore := calculateBrokerageActionScore(rating)
-			targetPriceChange := calculateTargerPriceChange(rating.TargetFrom, rating.TargetTo)
-			priceTargetChangeScore := calculatePriceTargetChangeScore(targetPriceChange)
-			score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, priceTargetChangeScore)
+			targetPriceChange := calculateTargetPriceChange(rating.TargetFrom, rating.TargetTo)
+			targetPriceChangeScore := calculateTargetPriceChangeScore(targetPriceChange)
+			score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore)
 
 			stockRating := entity.StockRating{
 				Brokerage:         rating.Brokerage,
@@ -207,18 +199,18 @@ func calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore,
 	return float32(score) / 100
 }
 
-func calculateTargerPriceChange(rawTargetFrom, rawTargetTo string) float64 {
+func calculateTargetPriceChange(rawTargetFrom, rawTargetTo string) float64 {
 	targetFrom, fromErr := strconv.ParseFloat(strings.TrimPrefix(rawTargetFrom, "$"), 64)
 	targetTo, toErr := strconv.ParseFloat(strings.TrimPrefix(rawTargetTo, "$"), 64)
 
-	if fromErr != nil || toErr != nil {
+	if fromErr != nil || toErr != nil || targetFrom == 0 {
 		return 0
 	}
 
-	return (targetTo - targetFrom) / targetTo
+	return (targetTo - targetFrom) / targetFrom
 }
 
-func calculatePriceTargetChangeScore(priceTargetChange float64) int {
+func calculateTargetPriceChangeScore(priceTargetChange float64) int {
 	switch {
 	case priceTargetChange < 0:
 		return 0

@@ -12,14 +12,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rubenpad/stock-rating-system/internal/domain/service"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/api"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/health"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/handler/stock"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/logging"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/pagination"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/search"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/storage/cockroach"
+	"github.com/rubenpad/srs/internal/domain/service"
+	"github.com/rubenpad/srs/internal/infrastructure/api"
+	"github.com/rubenpad/srs/internal/infrastructure/server/handler/health"
+	"github.com/rubenpad/srs/internal/infrastructure/server/handler/stock"
+	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/logging"
+	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/pagination"
+	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/search"
+	"github.com/rubenpad/srs/internal/infrastructure/storage/cockroach"
 )
 
 type Server struct {

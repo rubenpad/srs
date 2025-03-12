@@ -4,9 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/rubenpad/stock-rating-system/internal/domain/service"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/pagination"
-	"github.com/rubenpad/stock-rating-system/internal/infrastructure/server/middleware/search"
+	"github.com/rubenpad/srs/internal/domain/service"
+	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/pagination"
+	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/search"
 
 	"github.com/gin-gonic/gin"
 )
