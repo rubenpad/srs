@@ -1,4 +1,4 @@
-# Stock Rating System  
+# Documentation for the stock rating system (SRS)
   
 ## Authors  
 - [Rubén Padilla](https://github.com/rubenpad)   
@@ -14,6 +14,7 @@
 - Provide a GET endpoint to provide the stock data
 - Provide a GET endpoint to provide details about a specific stock
 - Create an algorithm that analyses the input data and set a score to the stocks so they can be classified as potential investments for the user
+- Create a Vue SPA wit the UI to display the stock ratings data and the recommended stocks.
   
 ### Non-Goals  
 - Get realtime data for the stocks
@@ -22,27 +23,11 @@
   
 ## Detailed Design  
 
-<p width="100%" align="center"><img alt="" src="./docs/stock-rating-system.png" width="600" height="400" style="box-shadow: 2px 2px 25px -5px rgba(0,0,0,0.75);"></p>
+<p width="100%" align="center"><img alt="" src="./docs/srs.png" width="600" height="400" style="box-shadow: 2px 2px 25px -5px rgba(0,0,0,0.75);"></p>
   
 ### Data Models 
 
-#### Stock detail
-|field|type|description|
-|-----|----|-----------|
-|company|string|The name of the company|
-|ticker|string|The company code stock|
-|score|integer|Determines the puntuation for the stock to be recommended as good investment. The higher the value the better
-
-Example:
-```json
-{
-    "ticker": "RYN",
-    "company": "Rayonier",
-    "score": 7
-}
-```
-
-#### Stock historic information
+#### Stock ratings (stock_rating)
 |field|type|description|
 |-----|----|-----------|
 |brokerage|string|The brockerage name|
@@ -55,6 +40,7 @@ Example:
 |target_to|string|The new target price
 |time|string|The date of the brokerage action in ISO format
 |target_price_change|double|Measures the percentage change between target_from and target_to
+|score|double|Value calculate by the stock recommendation algorithm
 
 Example:
 ```json
@@ -68,11 +54,13 @@ Example:
     "rating_from": "Sector Perform",
     "brokerage": "Royal Bank of Canada",
     "time": "2025-02-09T00:30:05.873242012Z",
-    "target_price_change": 0.36
+    "target_price_change": 0.36,
+    "score": 4.5
 }
 ```
 
-### Stock analysis algorith definition
+### Stock analysis algorithm definition
+In this section we describe the elements used in the scoring and how they apply to the stock rating. Some elements are not standard and posible variations depend on the brokerage.
 
 The scoring for the stock recommendation system will be based on the next scale:
 
@@ -80,16 +68,18 @@ The scoring for the stock recommendation system will be based on the next scale:
 
 #### Key elements of the algorithm
 
-#### Actions
-  -  reiterated by
-  -  target lowered by
-  -  upgraded by
-  -  target raised by
-  -  initiated by
-  -  target set by
-  -  downgraded by
+When the service fetchs the data it apply the scoring algorithm to determine the value of the `score` field.
 
-#### Categorized Ratings
+##### Table of weights
+|field|weight|description|
+|-----|------|-----------|
+|rating|50%|The system check if the rating was upgraded or downgraded based on the values of `rating_from` and `rating_to`. Upgrades get a greater score than downgrades.|
+|brokerage action|25%|Upgrades actions get a greater score than downgrades actions. `reiterated by` and `target set by` are special cases because depend on what is the new rating. Combination with bullish ratings get greater score than the bearish ones.|
+|current target|15%|Bullish targets get better score than bearish ones.|
+|target price change|5%|Greate % price change add better score to the stock rating.|
+|report date|5%|Stocks with recent reports get better score.|
+
+#### Ratings by category
 
 ##### Strong buy (Bullish)
   - Strong-Buy
@@ -124,3 +114,13 @@ The scoring for the stock recommendation system will be based on the next scale:
 
 ##### Strong Sell (Bearish)
   - Sell
+
+#### Brokerage actions
+
+  -  upgraded by
+  -  target raised by
+  -  initiated by
+  -  reiterated by (special case)
+  -  target set by (special case)
+  -  downgraded by
+  -  target lowered by
