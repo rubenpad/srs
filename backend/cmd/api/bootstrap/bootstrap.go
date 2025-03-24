@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/database/cockroachdb"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rubenpad/srs/internal/infrastructure/logging"
+	"github.com/rubenpad/srs/internal/infrastructure/otel"
 	"github.com/rubenpad/srs/internal/infrastructure/server"
 )
 
@@ -25,11 +27,24 @@ type config struct {
 }
 
 func Run() error {
+	logging.Set()
+
 	var configuration config
 	err := envconfig.Process("SRS", &configuration)
 	if err != nil {
 		return err
 	}
+
+	tp, tracerError := otel.InitTracer()
+	if tracerError != nil {
+		return err
+	}
+
+	defer func() {
+		if tpError := tp.Shutdown(context.Background()); tpError != nil {
+			slog.Error("error shutting down tracer", "error", tpError.Error())
+		}
+	}()
 
 	connectionParams := "?sslmode=require&pool_max_conns=40&pool_max_conn_lifetime=300s&pool_max_conn_lifetime_jitter=30s"
 	connectionString := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", configuration.DatabaseUser, configuration.DatabasePassword, configuration.DatabaseHost, configuration.DatabasePort, configuration.Database) + connectionParams
@@ -43,7 +58,6 @@ func Run() error {
 
 	defer connectionPool.Close()
 
-	logging.Set()
 	ctx, srv := server.New(context.Background(), "0.0.0.0", 8080, configuration.ShutdownTimeout, connectionPool)
 
 	return srv.Run(ctx)

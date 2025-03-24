@@ -28,7 +28,7 @@ onMounted(async () => {
                                     <span :class="['leading-normal text-sm font-weight-bolder', stock.target_price_change >=
                                         0 ? 'text-lime-500' : 'text-red-500'
                                     ]">{{ `${(stock.target_price_change > 0 ? '+' : '') + stock.target_price_change}%`
-                                    }}</span>
+                                        }}</span>
                                 </h5>
                                 <span :class="[
                                     'rounded-md text-md font-medium ring-1 ring-inset mt-2 text-center p-2',
@@ -42,8 +42,14 @@ onMounted(async () => {
                                 ]">
                                     {{ stock.rating }}
                                 </span>
-                                <span class="text-lg font-bold row-start-1 row-end-3 text-center p-8">{{
-                                    stock.score }}</span>
+                                <div class="row-start-1 row-end-3 text-center p-8">
+                                    <h5>
+                                        Score
+                                    </h5>
+                                    <span class="text-lg font-bold">{{
+                                        stock.score }}</span>
+                                </div>
+
                             </div>
                         </RouterLink>
                     </div>

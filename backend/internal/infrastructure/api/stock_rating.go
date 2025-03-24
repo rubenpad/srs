@@ -51,6 +51,7 @@ func (s *StockRatingApi) GetStockRatings(ctx context.Context, nextPage string) (
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
+		slog.Error("http error", "error", err)
 		return nil, nextPage, errors.New(errorMessage)
 	}
 

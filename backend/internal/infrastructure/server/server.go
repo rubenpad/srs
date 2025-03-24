@@ -20,6 +20,7 @@ import (
 	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/pagination"
 	"github.com/rubenpad/srs/internal/infrastructure/server/middleware/search"
 	"github.com/rubenpad/srs/internal/infrastructure/storage/cockroach"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 type Server struct {
@@ -48,6 +49,7 @@ func (s *Server) registerRoutes(connectionPool *pgxpool.Pool) {
 		logging.Middleware(),
 		pagination.Middleware(),
 		search.Middleware(),
+		otelgin.Middleware("srs"),
 	)
 
 	stockRatingRepository := cockroach.NewStockRatingRepository(connectionPool)

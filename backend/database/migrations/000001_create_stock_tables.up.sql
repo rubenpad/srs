@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS stock_rating (
     target_to VARCHAR(50) NOT NULL,
     target_price_change DECIMAL(10, 2) NOT NULL,
     score DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "primary" PRIMARY KEY (ticker, brokerage, time DESC)
 );
 
