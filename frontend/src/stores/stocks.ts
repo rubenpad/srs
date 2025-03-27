@@ -15,29 +15,42 @@ export const useStore = defineStore("stocks", {
 
   actions: {
     async fetchStockRatings(page = 1, search = '') {
-      const nextPageValue = this.stockRatingsPages.get(page - 1) || ''
+      try {
+        const nextPageValue = this.stockRatingsPages.get(page - 1) || ''
 
-      const response = await axios
-        .get(`/api/stock-ratings`,
-          { params: { nextPage: nextPageValue, pageSize: this.stockRatingsPageSize, search } });
+        const response = await axios
+          .get(`/api/stock-ratings`,
+            { params: { nextPage: nextPageValue, pageSize: this.stockRatingsPageSize, search } });
 
-      this.stockRatings = response.data.data;
-      this.hasMoreStockRatings = response.data.nextPage !== ''
+        this.stockRatings = response.data.data;
+        this.hasMoreStockRatings = response.data.nextPage !== ''
 
-      if (this.hasMoreStockRatings) this.stockRatingsPages.set(page, response.data.nextPage)
+        if (this.hasMoreStockRatings) this.stockRatingsPages.set(page, response.data.nextPage)
+      } catch {
+        return null;
+      }
+
     },
 
     async fetchStockRecommendations(pageSize: number) {
-      const response = await axios.get(`/api/stock-recommendations?pageSize=${pageSize}`);
-      this.stockRecommendations = response.data.data;
+      try {
+        const response = await axios.get(`/api/stock-recommendations?pageSize=${pageSize}`);
+        this.stockRecommendations = response.data.data;
+      } catch  {
+        return null;
+      }
     },
 
     async fetchStockDetails(ticker: string) {
       const maybeDetails = this.stockDetails.get(ticker)
       if (maybeDetails !== undefined) return;
 
-      const response = await axios.get(`/api/stock-details/${ticker}`);
-      this.stockDetails.set(ticker, response.data)
+      try {
+        const response = await axios.get(`/api/stock-details/${ticker}`);
+        this.stockDetails.set(ticker, response.data)
+      } catch  {
+        return null;
+      }
     },
   },
 });

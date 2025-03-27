@@ -110,7 +110,22 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <tr v-for="stock in store.stockRatings" :key="stock.ticker" class="hover:bg-gray-50">
+                                <template v-if="loading">
+                                    <tr v-for="row in 10" :key="row" class="animate-pulse">
+                                        <td v-for="column in 7" :key="column" class="px-6 py-4 whitespace-nowrap">
+                                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                        </td>
+                                    </tr>
+                                </template>
+
+                                <tr v-else-if="store.stockRatings.length === 0">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="7">
+                                        No stock ratings found
+                                    </td>
+                                </tr>
+
+                                <tr v-else v-for="stock in store.stockRatings" :key="stock.ticker"
+                                    class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.brokerage }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.action }}
@@ -187,3 +202,21 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
         </div>
     </div>
 </template>
+
+<style scoped>
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .5;
+    }
+}
+</style>

@@ -34,7 +34,7 @@ func Middleware() gin.HandlerFunc {
 		slog.Info("response",
 			slog.Duration("timestamp", time.Duration(timestamp.Unix())),
 			slog.Int("statusCode", statusCode),
-			slog.Duration("latency", latency),
+			slog.Duration("latency", time.Duration(latency.Milliseconds())),
 			slog.String("clientIP", clientIP),
 			slog.String("method", method),
 			slog.String("path", path),

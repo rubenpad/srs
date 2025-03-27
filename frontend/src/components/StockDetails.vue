@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from '@/stores/stocks';
 import { Line } from 'vue-chartjs';
@@ -9,6 +9,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const route = useRoute();
 const store = useStore();
+const loading = ref(false);
 const ticker = route.params.ticker as string;
 
 const formatPrice = (price: number | undefined): string => {
@@ -60,12 +61,20 @@ const chartOptions = {
     }
 };
 
-onMounted(() => store.fetchStockDetails(ticker));
+onMounted(async () => {
+    loading.value = true;
+    await store.fetchStockDetails(ticker)
+    loading.value = false;
+});
 </script>
 
 <template>
     <div class="p-4">
-        <div v-if="store.stockDetails.get(ticker)" class="space-y-6">
+        <div v-if="loading" class="flex items-center justify-center h-64">
+            <p class="text-gray-500">Loading stock details...</p>
+        </div>
+
+        <div v-else-if="store.stockDetails.get(ticker)" class="space-y-6">
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote` }}</h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -95,8 +104,18 @@ onMounted(() => store.fetchStockDetails(ticker));
                 </div>
             </div>
         </div>
-        <div v-else class="flex items-center justify-center h-64">
-            <p class="text-gray-500">Loading stock details...</p>
+
+        <div v-else class="flex flex-col items-center justify-center h-64">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold text-gray-700 mb-2">Stock Details Not Found</h2>
+                <p class="text-gray-500 mb-4">
+                    We couldn't find any details for ticker "{{ ticker }}"
+                </p>
+                <RouterLink to="/"
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    ← Back to Stock Ratings
+                </RouterLink>
+            </div>
         </div>
     </div>
 </template>

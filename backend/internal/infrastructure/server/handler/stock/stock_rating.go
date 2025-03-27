@@ -21,8 +21,15 @@ func NewStockRatingController(stockRatingService *service.StockRatingService) *S
 
 func (src *StockRatingController) GetStockDetails(ctx *gin.Context) {
 	ticker := ctx.Param("ticker")
-
 	stockDetails := src.stockRatingService.GetStockDetails(ctx, ticker)
+
+	if stockDetails == nil || (stockDetails.Quote == nil && stockDetails.Recommendations == nil) {
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"code":    "not_found",
+			"message": "stock details not found",
+		})
+		return
+	}
 
 	ctx.Header("Cache-Control", "private, max-age=900")
 	ctx.JSON(http.StatusOK, stockDetails)

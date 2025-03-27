@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/rubenpad/srs/internal/domain/entity"
@@ -81,7 +82,7 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 		err  error
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	quoteCh := make(chan result[finnhub.Quote])
@@ -90,7 +91,12 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 	defer close(quoteCh)
 	defer close(recommendationCh)
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	go func() {
+		defer wg.Done()
+
 		data, _, err := s.finnhubClient.Quote(ctx).Symbol(ticker).Execute()
 		select {
 		case <-ctx.Done():
@@ -100,6 +106,8 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 	}()
 
 	go func() {
+		defer wg.Done()
+
 		data, _, err := s.finnhubClient.RecommendationTrends(ctx).Symbol(ticker).Execute()
 		select {
 		case <-ctx.Done():
@@ -108,34 +116,39 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 		}
 	}()
 
-	timer := time.NewTimer(5 * time.Second)
-	defer timer.Stop()
+	done := make(chan struct{})
+	defer func() {
+		wg.Wait()
+		close(done)
+	}()
 
 	var quote finnhub.Quote
 	var recommendations []finnhub.RecommendationTrend
+
 	for range 2 {
 		select {
 		case <-ctx.Done():
-			slog.Error("context cancelled", "error", ctx.Err())
+			slog.Error("request timeout or cancelled", "error", ctx.Err())
 			return nil
 
-		case <-timer.C:
-			slog.Error("timeout getting stock details")
+		case <-done:
 			return nil
 
-		case res := <-quoteCh:
-			if res.err != nil {
-				slog.Error("error getting stock quote", "error", res.err)
+		case response := <-quoteCh:
+			if response.err != nil {
+				slog.Error("error getting stock quote", "error", response.err)
 				return nil
 			}
-			quote = res.data
 
-		case res := <-recommendationCh:
-			if res.err != nil {
-				slog.Error("error getting stock recommendation trends", "error", res.err)
+			quote = response.data
+
+		case response := <-recommendationCh:
+			if response.err != nil {
+				slog.Error("error getting stock recommendation trends", "error", response.err)
 				return nil
 			}
-			recommendations = res.data
+
+			recommendations = response.data
 		}
 	}
 
