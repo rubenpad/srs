@@ -45,7 +45,6 @@ type IStockRatingApi interface {
 
 type IStockRatingRepository interface {
 	Save(ctx context.Context, stock StockRating)
-	BatchSave(ctx context.Context, stockRatings []StockRating)
 	GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) ([]StockRating, error)
 	GetStockRecommendations(ctx context.Context, pageSize int) ([]StockRatingAggregate, error)
 }

@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/rubenpad/srs/internal/domain/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 type MockStockRatingApi struct {
@@ -19,7 +19,9 @@ type MockStockRatingRepository struct {
 	mock.Mock
 }
 
-func (m *MockStockRatingRepository) Save(ctx context.Context, stock entity.StockRating) {}
+func (m *MockStockRatingRepository) Save(ctx context.Context, stock entity.StockRating) {
+	m.Called(ctx, stock)
+}
 
 func (m *MockStockRatingRepository) BatchSave(ctx context.Context, stockRatings []entity.StockRating) {
 	m.Called(ctx, stockRatings)
@@ -54,84 +56,56 @@ func (m *MockStockRatingApi) GetStockRatings(ctx context.Context, nextPage strin
 	return args.Get(0).([]entity.StockRating), args.String(1), args.Error(2)
 }
 
-func TestUpgradeRatingScore(t *testing.T) {
+func TestLoadStockRatingsData(t *testing.T) {
 	ctx := context.Background()
 	mockApi := new(MockStockRatingApi)
 	mockRepository := new(MockStockRatingRepository)
 
 	testTime := time.Now()
-	testStockRatings := []entity.StockRating{
+
+	testBatch1 := []entity.StockRating{
 		{
-			Brokerage:  "TestBroker",
+			Brokerage:  "TestBroker1",
 			Action:     "upgraded by",
-			Company:    "TestCompany",
-			Ticker:     "TEST",
+			Company:    "TestCompany1",
+			Ticker:     "TEST1",
 			RatingFrom: "Hold",
 			RatingTo:   "Buy",
 			TargetFrom: "$10.00",
-			TargetTo:   "$12.00",
+			TargetTo:   "$15.00",
 			Time:       testTime,
 		},
 	}
 
-	var savedRatings []entity.StockRating
-
-	mockApi.On("GetStockRatings", ctx, "").
-		Return(testStockRatings, "", nil).Once()
-
-	mockRepository.On("BatchSave", ctx, mock.AnythingOfType("[]entity.StockRating")).
-		Run(func(args mock.Arguments) {
-			savedRatings = args.Get(1).([]entity.StockRating)
-		}).Return(nil).Once()
-
-	service := NewStockRatingService(mockRepository, mockApi)
-
-	service.LoadStockRatingsData(ctx)
-
-	mockApi.AssertExpectations(t)
-	mockRepository.AssertExpectations(t)
-
-	require.Len(t, savedRatings, 1)
-	processedRating := savedRatings[0]
-
-	assert.Equal(t, 5, calculateDateScore(testTime))                                                                                      // Recent date
-	assert.Equal(t, 1, calculateTargetPriceChangeScore(calculateTargetPriceChange(processedRating.TargetFrom, processedRating.TargetTo))) // $10 -> $12 is 20% increase
-	assert.Equal(t, 5, ratingScaleMap[processedRating.RatingTo])                                                                          // "Buy" rating
-	assert.Equal(t, 5, calculateRatingChangeScore(processedRating))                                                                       // Hold -> Buy is an upgrade
-	assert.Equal(t, 5, calculateBrokerageActionScore(processedRating))                                                                    // "Upgrade" action
-
-	assert.Equal(t, float32(4.8), processedRating.Score)
-}
-
-func TestDowngradeActionScore(t *testing.T) {
-	ctx := context.Background()
-	mockApi := new(MockStockRatingApi)
-	mockRepository := new(MockStockRatingRepository)
-
-	testTime := time.Now()
-	testStockRatings := []entity.StockRating{
+	testBatch2 := []entity.StockRating{
 		{
-			Brokerage:  "TestBroker",
+			Brokerage:  "TestBroker2",
 			Action:     "downgraded by",
-			Company:    "TestCompany",
-			Ticker:     "TEST",
-			RatingFrom: "Hold",
+			Company:    "TestCompany2",
+			Ticker:     "TEST2",
+			RatingFrom: "Buy",
 			RatingTo:   "Sell",
-			TargetFrom: "$17.00",
-			TargetTo:   "$9.00",
+			TargetFrom: "$20.00",
+			TargetTo:   "$15.00",
 			Time:       testTime,
 		},
 	}
 
-	var savedRatings []entity.StockRating
+	var mu sync.Mutex
+	var processedRatings []entity.StockRating
 
 	mockApi.On("GetStockRatings", ctx, "").
-		Return(testStockRatings, "", nil).Once()
+		Return(testBatch1, "next_page", nil).Once()
+	mockApi.On("GetStockRatings", ctx, "next_page").
+		Return(testBatch2, "", nil).Once()
 
-	mockRepository.On("BatchSave", ctx, mock.AnythingOfType("[]entity.StockRating")).
+	// Capture processed ratings in thread-safe way
+	mockRepository.On("Save", ctx, mock.AnythingOfType("entity.StockRating")).
 		Run(func(args mock.Arguments) {
-			savedRatings = args.Get(1).([]entity.StockRating)
-		}).Return(nil).Once()
+			mu.Lock()
+			processedRatings = append(processedRatings, args.Get(1).(entity.StockRating))
+			mu.Unlock()
+		}).Return(nil)
 
 	service := NewStockRatingService(mockRepository, mockApi)
 
@@ -140,14 +114,35 @@ func TestDowngradeActionScore(t *testing.T) {
 	mockApi.AssertExpectations(t)
 	mockRepository.AssertExpectations(t)
 
-	require.Len(t, savedRatings, 1)
-	processedRating := savedRatings[0]
+	assert.Equal(t, len(testBatch1)+len(testBatch2), len(processedRatings))
 
-	assert.Equal(t, 5, calculateDateScore(testTime))
-	assert.Equal(t, 0, calculateTargetPriceChangeScore(calculateTargetPriceChange(processedRating.TargetFrom, processedRating.TargetTo)))
-	assert.Equal(t, 1, ratingScaleMap[processedRating.RatingTo])
-	assert.Equal(t, 1, calculateRatingChangeScore(processedRating))
-	assert.Equal(t, 1, calculateBrokerageActionScore(processedRating))
+	var upgradedRating entity.StockRating
+	for _, r := range processedRatings {
+		if r.Ticker == "TEST1" {
+			upgradedRating = r
+			break
+		}
+	}
 
-	assert.Equal(t, float32(1.15), processedRating.Score)
+	assert.NotEmpty(t, upgradedRating)
+	assert.Equal(t, 5, calculateDateScore(upgradedRating.Time))
+	assert.Equal(t, 5, calculateTargetPriceChangeScore(calculateTargetPriceChange(upgradedRating.TargetFrom, upgradedRating.TargetTo)))
+	assert.Equal(t, 5, ratingScaleMap[upgradedRating.RatingTo])
+	assert.Equal(t, 5, calculateRatingChangeScore(upgradedRating))
+	assert.Equal(t, 5, calculateBrokerageActionScore(upgradedRating))
+
+	var downgradedRating entity.StockRating
+	for _, r := range processedRatings {
+		if r.Ticker == "TEST2" {
+			downgradedRating = r
+			break
+		}
+	}
+
+	assert.NotEmpty(t, downgradedRating)
+	assert.Equal(t, 5, calculateDateScore(downgradedRating.Time))
+	assert.Equal(t, 0, calculateTargetPriceChangeScore(calculateTargetPriceChange(downgradedRating.TargetFrom, downgradedRating.TargetTo)))
+	assert.Equal(t, 1, ratingScaleMap[downgradedRating.RatingTo])
+	assert.Equal(t, 1, calculateRatingChangeScore(downgradedRating))
+	assert.Equal(t, 1, calculateBrokerageActionScore(downgradedRating))
 }

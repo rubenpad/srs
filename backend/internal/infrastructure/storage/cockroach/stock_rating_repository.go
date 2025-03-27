@@ -91,52 +91,23 @@ func (srr *StockRatingRepository) Save(ctx context.Context, stockRating entity.S
 		"target_to":           stockRating.TargetTo,
 		"time":                stockRating.Time,
 		"target_price_change": stockRating.TargetPriceChange,
+		"score":               stockRating.Score,
 	}
+
 	_, err := srr.pool.Exec(ctx, insertQuery, args)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			slog.Info(
+				"skipping duplicate stock rating - probably running the load data again",
+				"constraint", pgErr.ConstraintName,
+				"data", stockRating,
+			)
+			return
+		}
+
 		slog.Error("error saving stock rating", "error", err)
-	}
-}
-
-func (srr *StockRatingRepository) BatchSave(ctx context.Context, stockRatings []entity.StockRating) {
-	batch := &pgx.Batch{}
-	for _, stockRating := range stockRatings {
-		args := pgx.NamedArgs{
-			"brokerage":           stockRating.Brokerage,
-			"action":              stockRating.Action,
-			"company":             stockRating.Company,
-			"ticker":              stockRating.Ticker,
-			"rating_from":         stockRating.RatingFrom,
-			"rating_to":           stockRating.RatingTo,
-			"target_from":         stockRating.TargetFrom,
-			"target_to":           stockRating.TargetTo,
-			"time":                stockRating.Time,
-			"target_price_change": stockRating.TargetPriceChange,
-			"score":               stockRating.Score,
-		}
-
-		batch.Queue(insertQuery, args)
-	}
-
-	results := srr.pool.SendBatch(ctx, batch)
-	defer results.Close()
-
-	for _, stockRating := range stockRatings {
-		_, err := results.Exec()
-
-		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				slog.Info(
-					"skipping duplicate stock rating - probably running the load data again",
-					"constraint", pgErr.ConstraintName,
-					"data", stockRating,
-				)
-				continue
-			}
-			slog.Error("error saving stock rating", "error", err)
-		}
 	}
 }
 

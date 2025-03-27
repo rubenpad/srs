@@ -6,23 +6,29 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/rubenpad/srs/internal/domain/entity"
 )
 
-const strongBuyRatingScore = 5
-const buyRatingScore = 4
-const holdRatingScore = 3
-const sellRatingScore = 2
-const strongSellRatingScore = 1
+const (
+	strongBuyRatingScore    = 5
+	buyRatingScore          = 4
+	holdRatingScore         = 3
+	sellRatingScore         = 2
+	strongSellRatingScore   = 1
+	reportDateWeight        = 5
+	ratingChangeWeight      = 50
+	currentTargetWeight     = 15
+	brokerageActionWeight   = 25
+	targetPriceChangeWeight = 5
 
-const reportDateWeight = 5
-const ratingChangeWeight = 50
-const currentTargetWeight = 15
-const brokerageActionWeight = 25
-const targetPriceChangeWeight = 5
+	workers           = 4
+	itemsBatchSize    = 10
+	channelBufferSize = itemsBatchSize * (workers / 2)
+)
 
 var actionsScaleMap = map[string]int{
 	"upgraded by":       5,
@@ -133,8 +139,21 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 
 	slog.Info("process to load stock ratings started")
 	start := time.Now()
-	nextPage := ""
 
+	ratingsChannel := make(chan entity.StockRating, channelBufferSize)
+
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for rating := range ratingsChannel {
+				s.stockRatingRepository.Save(ctx, s.formatStockRating(rating))
+			}
+		}()
+	}
+
+	nextPage := ""
 	for {
 		stockRatings, nNextPage, err := s.stockRatingApi.GetStockRatings(ctx, nextPage)
 		if err != nil {
@@ -143,42 +162,23 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 			break
 		}
 
-		formattedStockRatings := make([]entity.StockRating, 0, len(stockRatings))
-
 		for _, rating := range stockRatings {
-			reportDateScore := calculateDateScore(rating.Time)
-			currentRatingScore := ratingScaleMap[rating.RatingTo]
-			ratingChangeScore := calculateRatingChangeScore(rating)
-			brokerageActionScore := calculateBrokerageActionScore(rating)
-			targetPriceChange := calculateTargetPriceChange(rating.TargetFrom, rating.TargetTo)
-			targetPriceChangeScore := calculateTargetPriceChangeScore(targetPriceChange)
-			score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore)
-
-			stockRating := entity.StockRating{
-				Brokerage:         rating.Brokerage,
-				Action:            rating.Action,
-				Company:           rating.Company,
-				Ticker:            rating.Ticker,
-				RatingFrom:        rating.RatingFrom,
-				RatingTo:          rating.RatingTo,
-				TargetFrom:        rating.TargetFrom,
-				TargetTo:          rating.TargetTo,
-				Time:              rating.Time,
-				TargetPriceChange: targetPriceChange,
-				Score:             score,
+			select {
+			case <-ctx.Done():
+				goto Cleanup
+			case ratingsChannel <- rating:
 			}
-
-			formattedStockRatings = append(formattedStockRatings, stockRating)
 		}
 
-		s.stockRatingRepository.BatchSave(ctx, formattedStockRatings)
-
 		nextPage = nNextPage
-
 		if nNextPage == "" {
 			break
 		}
 	}
+
+Cleanup:
+	close(ratingsChannel)
+	wg.Wait()
 
 	elapsed := time.Since(start)
 	minutes := int(elapsed.Minutes())
@@ -186,6 +186,30 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 	milliseconds := int(elapsed.Milliseconds()) % 1000
 	duration := fmt.Sprintf("%dm %ds %dms", minutes, seconds, milliseconds)
 	slog.Info("process to load stock ratings finished", "duration", duration)
+}
+
+func (s *StockRatingService) formatStockRating(rating entity.StockRating) entity.StockRating {
+	reportDateScore := calculateDateScore(rating.Time)
+	currentRatingScore := ratingScaleMap[rating.RatingTo]
+	ratingChangeScore := calculateRatingChangeScore(rating)
+	brokerageActionScore := calculateBrokerageActionScore(rating)
+	targetPriceChange := calculateTargetPriceChange(rating.TargetFrom, rating.TargetTo)
+	targetPriceChangeScore := calculateTargetPriceChangeScore(targetPriceChange)
+	score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore)
+
+	return entity.StockRating{
+		Brokerage:         rating.Brokerage,
+		Action:            rating.Action,
+		Company:           rating.Company,
+		Ticker:            rating.Ticker,
+		RatingFrom:        rating.RatingFrom,
+		RatingTo:          rating.RatingTo,
+		TargetFrom:        rating.TargetFrom,
+		TargetTo:          rating.TargetTo,
+		Time:              rating.Time,
+		TargetPriceChange: targetPriceChange,
+		Score:             score,
+	}
 }
 
 func calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore int) float32 {
