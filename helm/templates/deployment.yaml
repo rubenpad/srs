@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         app: {{ include "srs.name" . }}
+        version: {{ .Chart.AppVersion }}
     spec:
       initContainers:
         - name: init-static-files
