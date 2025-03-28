@@ -140,6 +140,9 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 	slog.Info("process to load stock ratings started")
 	start := time.Now()
 
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
 	ratingsChannel := make(chan entity.StockRating, channelBufferSize)
 
 	var wg sync.WaitGroup
@@ -148,7 +151,12 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 		go func() {
 			defer wg.Done()
 			for rating := range ratingsChannel {
-				s.stockRatingRepository.Save(ctx, s.formatStockRating(rating))
+				select {
+				case <-timeoutCtx.Done():
+					return
+				default:
+					s.stockRatingRepository.Save(ctx, s.formatStockRating(rating))
+				}
 			}
 		}()
 	}
@@ -178,7 +186,18 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 
 Cleanup:
 	close(ratingsChannel)
-	wg.Wait()
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(1 * time.Minute):
+		slog.Warn("worker timeout exceeded during cleanup")
+	}
 
 	elapsed := time.Since(start)
 	minutes := int(elapsed.Minutes())
