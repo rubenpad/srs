@@ -126,7 +126,7 @@ func TestLoadStockRatingsData(t *testing.T) {
 
 	assert.NotEmpty(t, upgradedRating)
 	assert.Equal(t, 5, calculateDateScore(upgradedRating.Time))
-	assert.Equal(t, 5, calculateTargetPriceChangeScore(calculateTargetPriceChange(upgradedRating.TargetFrom, upgradedRating.TargetTo)))
+	assert.Equal(t, 5, calculateTargetPriceChangeScore(calculateTargetPriceChange(upgradedRating)))
 	assert.Equal(t, 5, ratingScaleMap[upgradedRating.RatingTo])
 	assert.Equal(t, 5, calculateRatingChangeScore(upgradedRating))
 	assert.Equal(t, 5, calculateBrokerageActionScore(upgradedRating))
@@ -141,7 +141,7 @@ func TestLoadStockRatingsData(t *testing.T) {
 
 	assert.NotEmpty(t, downgradedRating)
 	assert.Equal(t, 5, calculateDateScore(downgradedRating.Time))
-	assert.Equal(t, 0, calculateTargetPriceChangeScore(calculateTargetPriceChange(downgradedRating.TargetFrom, downgradedRating.TargetTo)))
+	assert.Equal(t, 0, calculateTargetPriceChangeScore(calculateTargetPriceChange(downgradedRating)))
 	assert.Equal(t, 1, ratingScaleMap[downgradedRating.RatingTo])
 	assert.Equal(t, 1, calculateRatingChangeScore(downgradedRating))
 	assert.Equal(t, 1, calculateBrokerageActionScore(downgradedRating))
