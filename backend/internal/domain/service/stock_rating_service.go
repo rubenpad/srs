@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/gocolly/colly/v2"
 	"github.com/rubenpad/srs/internal/domain/entity"
 )
 
@@ -90,7 +92,14 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 }
 
 func (s *StockRatingService) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {
-	return s.stockRatingApi.GetStockDetails(ctx, ticker)
+	keyFacts := s.getStockFromExternalPage(ticker)
+	stockDetails := s.stockRatingApi.GetStockDetails(ctx, ticker)
+
+	return &entity.StockDetails{
+		KeyFacts:        keyFacts,
+		Quote:           stockDetails.Quote,
+		Recommendations: stockDetails.Recommendations,
+	}
 }
 
 func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) (*serviceResponse[entity.StockRating], error) {
@@ -108,7 +117,7 @@ func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage strin
 	if responseSize > 0 && existsMoreItems {
 		lastItemCurrentPage := stockRatings[responseSize-2]
 		nNextPage = lastItemCurrentPage.Ticker
-
+		stockRatings = stockRatings[:responseSize-1]
 	}
 
 	return &serviceResponse[entity.StockRating]{
@@ -127,6 +136,29 @@ func (s *StockRatingService) GetStockRecommendations(ctx context.Context, pageSi
 	return &serviceResponse[entity.StockRatingAggregate]{
 		Data: recommendations,
 	}, nil
+}
+
+func (s *StockRatingService) getStockFromExternalPage(ticker string) string {
+	var keyFacts string
+	tickerUrl := fmt.Sprintf("%s/%s", os.Getenv("WEB_TICKER_DATA_URL"), ticker)
+
+	collector := colly.NewCollector()
+
+	collector.OnError(func(r *colly.Response, err error) {
+		slog.Error("error collecting information from web", "error", err)
+	})
+
+	collector.OnHTML("html > body > div:nth-of-type(1) > section:nth-of-type(3) > section:nth-of-type(1) > div > section > div > div:nth-of-type(2)", func(e *colly.HTMLElement) {
+		keyFacts = e.ChildText("p")
+	})
+
+	collector.OnRequest(func(r *colly.Request) {
+		slog.Info("visiting web", "url", tickerUrl)
+	})
+
+	collector.Visit(tickerUrl)
+
+	return keyFacts
 }
 
 func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
@@ -212,10 +244,11 @@ func (s *StockRatingService) formatStockRating(rating entity.StockRating) entity
 	currentRatingScore := ratingScaleMap[rating.RatingTo]
 	ratingChangeScore := calculateRatingChangeScore(rating)
 	brokerageActionScore := calculateBrokerageActionScore(rating)
-	targetPriceChange := calculateTargetPriceChange(rating.TargetFrom, rating.TargetTo)
+	targetPriceChange := calculateTargetPriceChange(rating)
 	targetPriceChangeScore := calculateTargetPriceChangeScore(targetPriceChange)
 	score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore)
 
+	time.Date(2024, 12, 1, 4, 56, 2, 0, time.Local)
 	return entity.StockRating{
 		Brokerage:         rating.Brokerage,
 		Action:            rating.Action,
@@ -225,7 +258,7 @@ func (s *StockRatingService) formatStockRating(rating entity.StockRating) entity
 		RatingTo:          rating.RatingTo,
 		TargetFrom:        rating.TargetFrom,
 		TargetTo:          rating.TargetTo,
-		Time:              rating.Time,
+		Time:              rating.Time.Truncate(24 * time.Hour),
 		TargetPriceChange: targetPriceChange,
 		Score:             score,
 	}
@@ -242,11 +275,24 @@ func calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore,
 	return float32(score) / 100
 }
 
-func calculateTargetPriceChange(rawTargetFrom, rawTargetTo string) float64 {
-	targetFrom, fromErr := strconv.ParseFloat(strings.TrimPrefix(rawTargetFrom, "$"), 64)
-	targetTo, toErr := strconv.ParseFloat(strings.TrimPrefix(rawTargetTo, "$"), 64)
+func calculateTargetPriceChange(rating entity.StockRating) float64 {
+	targetFrom, fromErr := strconv.ParseFloat(strings.TrimPrefix(strings.ReplaceAll(rating.TargetFrom, ",", ""), "$"), 64)
+	targetTo, toErr := strconv.ParseFloat(strings.TrimPrefix(strings.ReplaceAll(rating.TargetTo, ",", ""), "$"), 64)
 
 	if fromErr != nil || toErr != nil || targetFrom == 0 {
+		slog.Warn(
+			"target price change calculation error",
+			"fromError",
+			fromErr,
+			"toError",
+			toErr,
+			"targetFrom",
+			targetFrom,
+			"targetTo",
+			targetTo,
+			"ticker", rating.Ticker,
+			"brokerage", rating.Brokerage,
+			"time", rating.Time)
 		return 0
 	}
 

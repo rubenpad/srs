@@ -34,6 +34,7 @@ type StockRatingAggregate struct {
 }
 
 type StockDetails struct {
+	KeyFacts        string                         `json:"keyFacts"`
 	Quote           *finnhub.Quote                 `json:"quote"`
 	Recommendations *[]finnhub.RecommendationTrend `json:"recommendations"`
 }

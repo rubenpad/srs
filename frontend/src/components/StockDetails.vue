@@ -75,34 +75,44 @@ onMounted(async () => {
         </div>
 
         <div v-else-if="store.stockDetails.get(ticker)" class="space-y-6">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote` }}</h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <p class="text-sm text-gray-600">Current</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}</p>
+            <RouterLink to="/"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                < </RouterLink>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote` }}</h2>
+                        <div class="mb-10">
+                            <p>{{  store.stockDetails.get(ticker)?.keyFacts }}</p>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-600">Current</p>
+                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}
+                                </p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-600">Previous Close</p>
+                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc)
+                                }}</p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-600">Open</p>
+                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}
+                                </p>
+                            </div>
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="text-sm text-gray-600">High</p>
+                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <p class="text-sm text-gray-600">Previous Close</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc) }}</p>
-                    </div>
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <p class="text-sm text-gray-600">Open</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}</p>
-                    </div>
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <p class="text-sm text-gray-600">High</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}</p>
-                    </div>
-                </div>
-            </div>
 
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="h-[400px]">
-                    <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
-                        :options="chartOptions" />
-                </div>
-            </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="h-[400px]">
+                            <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
+                                :options="chartOptions" />
+                        </div>
+                    </div>
         </div>
 
         <div v-else class="flex flex-col items-center justify-center h-64">

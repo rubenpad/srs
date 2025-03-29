@@ -43,6 +43,7 @@ interface IQuote {
 }
 
 export interface IStockDetails {
+    keyFacts: string
     quote: IQuote,
     recommendations: Array<IExternalRecommendation>
 }
