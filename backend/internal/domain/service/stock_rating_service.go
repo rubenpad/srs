@@ -248,7 +248,6 @@ func (s *StockRatingService) formatStockRating(rating entity.StockRating) entity
 	targetPriceChangeScore := calculateTargetPriceChangeScore(targetPriceChange)
 	score := calculateScore(ratingChangeScore, currentRatingScore, brokerageActionScore, reportDateScore, targetPriceChangeScore)
 
-	time.Date(2024, 12, 1, 4, 56, 2, 0, time.Local)
 	return entity.StockRating{
 		Brokerage:         rating.Brokerage,
 		Action:            rating.Action,

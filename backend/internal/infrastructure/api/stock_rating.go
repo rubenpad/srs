@@ -77,83 +77,60 @@ func (s *StockRatingApi) GetStockRatings(ctx context.Context, nextPage string) (
 }
 
 func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {
-	type result[T any] struct {
-		data T
-		err  error
-	}
+	var (
+		quoteErr, recErr error
+		wg               sync.WaitGroup
+		quote            finnhub.Quote
+		recommendations  []finnhub.RecommendationTrend
+	)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	quoteCh := make(chan result[finnhub.Quote])
-	recommendationCh := make(chan result[[]finnhub.RecommendationTrend])
-
-	defer close(quoteCh)
-	defer close(recommendationCh)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
 		data, _, err := s.finnhubClient.Quote(ctx).Symbol(ticker).Execute()
-		select {
-		case <-ctx.Done():
+		if err != nil {
+			quoteErr = err
+			slog.Error("error getting stock quote", "error", err, "ticker", ticker)
 			return
-		case quoteCh <- result[finnhub.Quote]{data, err}:
 		}
+		quote = data
 	}()
 
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
 		data, _, err := s.finnhubClient.RecommendationTrends(ctx).Symbol(ticker).Execute()
-		select {
-		case <-ctx.Done():
+		if err != nil {
+			recErr = err
+			slog.Error("error getting stock recommendation trends", "error", err, "ticker", ticker)
 			return
-		case recommendationCh <- result[[]finnhub.RecommendationTrend]{data, err}:
 		}
+		recommendations = data
 	}()
 
 	done := make(chan struct{})
-	defer func() {
+	go func() {
 		wg.Wait()
 		close(done)
 	}()
 
-	var quote finnhub.Quote
-	var recommendations []finnhub.RecommendationTrend
-
-	for range 2 {
-		select {
-		case <-ctx.Done():
-			slog.Error("request timeout or cancelled", "error", ctx.Err())
-			return nil
-
-		case <-done:
-			return nil
-
-		case response := <-quoteCh:
-			if response.err != nil {
-				slog.Error("error getting stock quote", "error", response.err)
-				return nil
-			}
-
-			quote = response.data
-
-		case response := <-recommendationCh:
-			if response.err != nil {
-				slog.Error("error getting stock recommendation trends", "error", response.err)
-				return nil
-			}
-
-			recommendations = response.data
+	select {
+	case <-ctx.Done():
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Error("request timeout exceeded", "ticker", ticker)
 		}
-	}
+		return nil
+	case <-done:
+		if quoteErr != nil && recErr != nil {
+			return nil
+		}
 
-	return &entity.StockDetails{
-		Quote:           &quote,
-		Recommendations: &recommendations,
+		return &entity.StockDetails{
+			Quote:           &quote,
+			Recommendations: &recommendations,
+		}
 	}
 }
