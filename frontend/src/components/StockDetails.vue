@@ -77,42 +77,47 @@ onMounted(async () => {
         <div v-else-if="store.stockDetails.get(ticker)" class="space-y-6">
             <RouterLink to="/"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                < </RouterLink>
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h2 class="text-xl font-bold mb-4">{{ `${ticker} Current Quote` }}</h2>
-                        <div class="mb-10">
-                            <p>{{  store.stockDetails.get(ticker)?.keyFacts }}</p>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="p-4 bg-gray-50 rounded-lg">
-                                <p class="text-sm text-gray-600">Current</p>
-                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}
-                                </p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg">
-                                <p class="text-sm text-gray-600">Previous Close</p>
-                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc)
-                                }}</p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg">
-                                <p class="text-sm text-gray-600">Open</p>
-                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}
-                                </p>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-lg">
-                                <p class="text-sm text-gray-600">High</p>
-                                <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}
-                                </p>
-                            </div>
-                        </div>
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd"
+                        d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                        clip-rule="evenodd" />
+                </svg>
+            </RouterLink>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-bold mb-4">{{ ticker }}</h2>
+                <div class="mb-10">
+                    <p>{{ store.stockDetails.get(ticker)?.keyFacts }}</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Current</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}
+                        </p>
                     </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Previous Close</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc)
+                            }}</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">Open</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}
+                        </p>
+                    </div>
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <p class="text-sm text-gray-600">High</p>
+                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <div class="h-[400px]">
-                            <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
-                                :options="chartOptions" />
-                        </div>
-                    </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="h-[400px]">
+                    <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
+                        :options="chartOptions" />
+                </div>
+            </div>
         </div>
 
         <div v-else class="flex flex-col items-center justify-center h-64">
@@ -123,7 +128,12 @@ onMounted(async () => {
                 </p>
                 <RouterLink to="/"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                    ← Back to Stock Ratings
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Back to Stock Ratings
                 </RouterLink>
             </div>
         </div>
