@@ -55,8 +55,7 @@ const { isLoading, data, status } = useQuery({
                 </div>
             </template>
 
-            <template v-if="status === 'success'">
-
+            <template v-if="!isLoading && status === 'success'">
                 <div v-for="stock in data?.data" :key="stock.ticker"
                     class="w-full max-w-full px-3 mb-6 sm:flex-none xl:mb-0 xl:w-1/5">
                     <div
