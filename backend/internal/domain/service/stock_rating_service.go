@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/gocolly/colly/v2"
 	"github.com/rubenpad/srs/internal/domain/entity"
 )
 
@@ -92,14 +90,7 @@ func NewStockRatingService(stockRatingRepository entity.IStockRatingRepository, 
 }
 
 func (s *StockRatingService) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {
-	keyFacts := s.getStockFromExternalPage(ticker)
-	stockDetails := s.stockRatingApi.GetStockDetails(ctx, ticker)
-
-	return &entity.StockDetails{
-		KeyFacts:        keyFacts,
-		Quote:           stockDetails.Quote,
-		Recommendations: stockDetails.Recommendations,
-	}
+	return s.stockRatingApi.GetStockDetails(ctx, ticker)
 }
 
 func (s *StockRatingService) GetStockRatings(ctx context.Context, nextPage string, pageSize int, search string) (*serviceResponse[entity.StockRating], error) {
@@ -136,29 +127,6 @@ func (s *StockRatingService) GetStockRecommendations(ctx context.Context, pageSi
 	return &serviceResponse[entity.StockRatingAggregate]{
 		Data: recommendations,
 	}, nil
-}
-
-func (s *StockRatingService) getStockFromExternalPage(ticker string) string {
-	var keyFacts string
-	tickerUrl := fmt.Sprintf("%s/%s", os.Getenv("WEB_TICKER_DATA_URL"), ticker)
-
-	collector := colly.NewCollector()
-
-	collector.OnError(func(r *colly.Response, err error) {
-		slog.Error("error collecting information from web", "error", err)
-	})
-
-	collector.OnHTML("html > body > div:nth-of-type(1) > section:nth-of-type(3) > section:nth-of-type(1) > div > section > div > div:nth-of-type(2)", func(e *colly.HTMLElement) {
-		keyFacts = e.ChildText("p")
-	})
-
-	collector.OnRequest(func(r *colly.Request) {
-		slog.Info("visiting web", "url", tickerUrl)
-	})
-
-	collector.Visit(tickerUrl)
-
-	return keyFacts
 }
 
 func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {

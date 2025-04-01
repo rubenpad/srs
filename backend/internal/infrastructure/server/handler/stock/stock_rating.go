@@ -23,7 +23,7 @@ func (src *StockRatingController) GetStockDetails(ctx *gin.Context) {
 	ticker := ctx.Param("ticker")
 	stockDetails := src.stockRatingService.GetStockDetails(ctx, ticker)
 
-	if stockDetails == nil || (stockDetails.Quote == nil && stockDetails.Recommendations == nil) {
+	if stockDetails == nil {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"code":    "not_found",
 			"message": "stock details not found",

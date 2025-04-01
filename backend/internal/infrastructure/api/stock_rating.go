@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gocolly/colly/v2"
 	"github.com/rubenpad/srs/internal/domain/entity"
 
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
@@ -24,10 +25,11 @@ type stockRatingsDto struct {
 }
 
 type StockRatingApi struct {
-	finnhubClient *finnhub.DefaultApiService
-	httpClient    *http.Client
 	baseURL       string
 	authToken     string
+	httpClient    *http.Client
+	collector     colly.Collector
+	finnhubClient *finnhub.DefaultApiService
 }
 
 func NewStockRatingApi() *StockRatingApi {
@@ -39,6 +41,7 @@ func NewStockRatingApi() *StockRatingApi {
 		baseURL:       os.Getenv("STOCK_RATING_API_URL"),
 		authToken:     os.Getenv("STOCK_RATING_API_AUTH_TOKEN"),
 		finnhubClient: finnhub.NewAPIClient(configuration).DefaultApi,
+		collector:     *colly.NewCollector(),
 	}
 }
 
@@ -80,12 +83,36 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 	var (
 		quoteErr, recErr error
 		wg               sync.WaitGroup
-		quote            finnhub.Quote
-		recommendations  []finnhub.RecommendationTrend
+
+		keyFacts        string
+		quote           finnhub.Quote
+		recommendations []finnhub.RecommendationTrend
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
+
+	tickerUrl := fmt.Sprintf("%s/%s", os.Getenv("WEB_TICKER_DATA_URL"), ticker)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		collector := colly.NewCollector()
+
+		collector.OnError(func(r *colly.Response, err error) {
+			slog.Error("error collecting information from web", "error", err)
+		})
+
+		collector.OnHTML("html > body > div:nth-of-type(1) > section:nth-of-type(3) > section:nth-of-type(1) > div > section > div > div:nth-of-type(2)", func(e *colly.HTMLElement) {
+			keyFacts = e.ChildText("p")
+		})
+
+		collector.OnRequest(func(r *colly.Request) {
+			slog.Info("visiting web", "url", tickerUrl)
+		})
+
+		collector.Visit(tickerUrl)
+	}()
 
 	wg.Add(1)
 	go func() {
@@ -129,6 +156,7 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 		}
 
 		return &entity.StockDetails{
+			KeyFacts:        keyFacts,
 			Quote:           &quote,
 			Recommendations: &recommendations,
 		}
