@@ -97,21 +97,20 @@ func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *en
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		collector := colly.NewCollector()
 
-		collector.OnError(func(r *colly.Response, err error) {
+		s.collector.OnError(func(r *colly.Response, err error) {
 			slog.Error("error collecting information from web", "error", err)
 		})
 
-		collector.OnHTML("html > body > div:nth-of-type(1) > section:nth-of-type(3) > section:nth-of-type(1) > div > section > div > div:nth-of-type(2)", func(e *colly.HTMLElement) {
+		s.collector.OnHTML("html > body > div:nth-of-type(1) > section:nth-of-type(3) > section:nth-of-type(1) > div > section > div > div:nth-of-type(2)", func(e *colly.HTMLElement) {
 			keyFacts = e.ChildText("p")
 		})
 
-		collector.OnRequest(func(r *colly.Request) {
+		s.collector.OnRequest(func(r *colly.Request) {
 			slog.Info("visiting web", "url", tickerUrl)
 		})
 
-		collector.Visit(tickerUrl)
+		s.collector.Visit(tickerUrl)
 	}()
 
 	wg.Add(1)
