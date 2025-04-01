@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { useStore } from "@/stores/stocks";
+import axios from "axios";
+import { useQuery } from "@pinia/colada";
 
-const store = useStore();
-const loading = ref(false);
-const topRecommendations = 5
+const topRecommendations = 5;
 
-onMounted(async () => {
-    loading.value = true;
-    await store.fetchStockRecommendations(topRecommendations)
-    loading.value = false;
+const { isLoading, data, status } = useQuery({
+    key: ['stock-recommendations'],
+    query: () => axios.get(`/api/stock-recommendations?pageSize=${topRecommendations}`).then(response => response.data)
 });
+
 </script>
 
 <template>
@@ -19,7 +17,7 @@ onMounted(async () => {
             <h6>Recommendations</h6>
         </div>
         <div class="flex flex-wrap -mx-3 mb-12 gap-y-4">
-            <template v-if="loading">
+            <template v-if="isLoading">
                 <div v-for="placeholder in topRecommendations" :key="placeholder"
                     class="w-full max-w-full px-3 mb-6 sm:flex-none xl:mb-0 xl:w-1/5">
                     <div
@@ -44,9 +42,20 @@ onMounted(async () => {
                         </div>
                     </div>
                 </div>
+            </template> 
+
+            <template v-else-if="status === 'error'">
+                <div class="w-full px-3">
+                    <div class="bg-white rounded-md shadow-soft-xl p-6 text-center">
+                        <h2 class="text-xl font-bold text-red-600 mb-2">Failed to load recommendations</h2>
+                        <p class="text-gray-600 mb-4">
+                            We couldn't load the latest stock recommendations. Please try again.
+                        </p>
+                    </div>
+                </div>
             </template>
 
-            <div v-else v-for="stock in store.stockRecommendations" :key="stock.ticker"
+            <div v-else v-for="stock in data.data" :key="stock.ticker"
                 class="w-full max-w-full px-3 mb-6 sm:flex-none xl:mb-0 xl:w-1/5">
                 <div
                     class="relative flex flex-col min-w-0 break-words bg-white shadow-soft-xl rounded-md bg-clip-border">

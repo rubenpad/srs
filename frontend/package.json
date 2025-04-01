@@ -17,6 +17,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@pinia/colada": "^0.14.2",
     "@tailwindcss/vite": "^4.0.12",
     "axios": "^1.8.2",
     "chart.js": "^4.4.8",

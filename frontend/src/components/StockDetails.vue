@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
-import { useStore } from '@/stores/stocks';
+import axios from 'axios';
+import { computed } from 'vue';
 import { Line } from 'vue-chartjs';
+import { useRoute } from 'vue-router';
+import { useQuery } from '@pinia/colada';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+
+import type { IStockDetails } from '@/domain/stock';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 const route = useRoute();
-const store = useStore();
-const loading = ref(false);
 const ticker = route.params.ticker as string;
+
+const {isLoading, data } =  useQuery<IStockDetails>({
+    key: [ticker],
+    query: () => axios.get(`/api/stock-details/${ticker}`).then(response => response.data)
+})
 
 const formatPrice = (price: number | undefined): string => {
     if (price === undefined) return '$0.00';
@@ -21,7 +27,7 @@ const formatPrice = (price: number | undefined): string => {
 };
 
 const recommendationData = computed(() => {
-    const recommendations = (store.stockDetails.get(ticker)?.recommendations || []).reverse();
+    const recommendations = (data.value?.recommendations || []).reverse();
     return {
         labels: recommendations.map(r => r.period),
         datasets: [
@@ -61,20 +67,15 @@ const chartOptions = {
     }
 };
 
-onMounted(async () => {
-    loading.value = true;
-    await store.fetchStockDetails(ticker)
-    loading.value = false;
-});
 </script>
 
 <template>
     <div class="p-4">
-        <div v-if="loading" class="flex items-center justify-center h-64">
+        <div v-if="isLoading" class="flex items-center justify-center h-64">
             <p class="text-gray-500">Loading stock details...</p>
         </div>
 
-        <div v-else-if="store.stockDetails.get(ticker)" class="space-y-6">
+        <div v-else-if="data" class="space-y-6">
             <RouterLink to="/"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                 <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -86,27 +87,27 @@ onMounted(async () => {
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-xl font-bold mb-4">{{ ticker }}</h2>
                 <div class="mb-10">
-                    <p>{{ store.stockDetails.get(ticker)?.keyFacts }}</p>
+                    <p>{{ data?.keyFacts }}</p>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Current</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.c) }}
+                        <p class="text-xl font-bold">{{ formatPrice(data?.quote?.c) }}
                         </p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Previous Close</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.pc)
+                        <p class="text-xl font-bold">{{ formatPrice(data?.quote?.pc)
                             }}</p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">Open</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.o) }}
+                        <p class="text-xl font-bold">{{ formatPrice(data?.quote?.o) }}
                         </p>
                     </div>
                     <div class="p-4 bg-gray-50 rounded-lg">
                         <p class="text-sm text-gray-600">High</p>
-                        <p class="text-xl font-bold">{{ formatPrice(store.stockDetails.get(ticker)?.quote?.h) }}
+                        <p class="text-xl font-bold">{{ formatPrice(data?.quote?.h) }}
                         </p>
                     </div>
                 </div>
@@ -114,7 +115,7 @@ onMounted(async () => {
 
             <div class="bg-white rounded-lg shadow p-6">
                 <div class="h-[400px]">
-                    <Line v-if="store.stockDetails.get(ticker)?.recommendations" :data="recommendationData"
+                    <Line v-if="data?.recommendations" :data="recommendationData"
                         :options="chartOptions" />
                 </div>
             </div>
