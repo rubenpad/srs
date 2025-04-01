@@ -1,19 +1,46 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import axios from "axios";
 import { RouterLink } from "vue-router";
-import { useStore } from "@/stores/stocks";
+import { ref, onUnmounted } from "vue";
+import { useQuery } from "@pinia/colada";
+import type { IStockRating } from "@/domain/stock";
 
 enum PageAction {
     PREV,
     NEXT
 }
 
-const store = useStore();
-
 const page = ref(1)
-const loading = ref(false);
 const search = ref('');
+const pages = ref(new Map());
 const searchTimeout = ref();
+const stockRatingsPageSize = 10
+const hasMoreStockRatings = ref(true)
+
+const fetchStockRatings = async () => {
+    const nextPageValue = pages.value.get(page.value - 1) || ''
+    const response = await axios
+        .get(`/api/stock-ratings`,
+            {
+                params: {
+                    search: search.value,
+                    nextPage: nextPageValue,
+                    pageSize: stockRatingsPageSize,
+                }
+            })
+
+
+    hasMoreStockRatings.value = response.data.nextPage !== ''
+    if (hasMoreStockRatings.value) pages.value.set(page.value, response.data.nextPage)
+
+    return response.data
+}
+
+const { isLoading, data, status, refetch } = useQuery<{ data: Array<IStockRating>, nextPage: string }>({
+    key: () => ['stock-ratings', page.value],
+    query: fetchStockRatings,
+    placeholderData: (placeholderData) => placeholderData
+})
 
 const handleSearch = (event: Event) => {
     const value = (event.target as HTMLInputElement).value;
@@ -24,25 +51,15 @@ const handleSearch = (event: Event) => {
     }
 
     searchTimeout.value = setTimeout(async () => {
-        loading.value = true
         page.value = 1;
-        await store.fetchStockRatings(page.value, search.value);
-        loading.value = false;
+        await refetch()
     }, 300);
 };
 
 const handlePageChange = async (pageAction: PageAction) => {
-    loading.value = true;
     if (pageAction === PageAction.NEXT) { page.value++ } else { page.value-- }
-    await store.fetchStockRatings(page.value, search.value);
-    loading.value = false;
+    await refetch()
 }
-
-onMounted(async () => {
-    loading.value = true;
-    await store.fetchStockRatings();
-    loading.value = false;
-})
 
 onUnmounted(() => { clearTimeout(searchTimeout.value) })
 
@@ -110,7 +127,7 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                <template v-if="loading">
+                                <template v-if="isLoading">
                                     <tr v-for="row in 10" :key="row" class="animate-pulse">
                                         <td v-for="column in 7" :key="column" class="px-6 py-4 whitespace-nowrap">
                                             <div class="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -118,14 +135,13 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                                     </tr>
                                 </template>
 
-                                <tr v-else-if="store.stockRatings.length === 0">
+                                <tr v-else-if="status === 'success' && data?.data?.length === 0">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" colspan="7">
                                         No stock ratings found
                                     </td>
                                 </tr>
 
-                                <tr v-else v-for="stock in store.stockRatings" :key="stock.ticker"
-                                    class="hover:bg-gray-50">
+                                <tr v-else v-for="stock in data?.data" :key="stock.ticker" class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.brokerage }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ stock.action }}
@@ -151,15 +167,15 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
 
                     <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
                         <div class="flex flex-1 justify-between sm:hidden">
-                            <button @click="handlePageChange(PageAction.PREV)" :disabled="page === 1 || loading"
+                            <button @click="handlePageChange(PageAction.PREV)" :disabled="page === 1 || isLoading"
                                 class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                :class="{ 'opacity-50 cursor-not-allowed': page === 1 || loading }">
+                                :class="{ 'opacity-50 cursor-not-allowed': page === 1 || isLoading }">
                                 Previous
                             </button>
                             <button @click="handlePageChange(PageAction.NEXT)"
-                                :disabled="!store.hasMoreStockRatings || loading"
+                                :disabled="!hasMoreStockRatings || isLoading"
                                 class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                :class="{ 'opacity-50 cursor-not-allowed': !store.hasMoreStockRatings || loading }">
+                                :class="{ 'opacity-50 cursor-not-allowed': !hasMoreStockRatings || isLoading }">
                                 Next
                             </button>
                         </div>
@@ -172,9 +188,10 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                             <div>
                                 <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm"
                                     aria-label="Pagination">
-                                    <button @click="handlePageChange(PageAction.PREV)" :disabled="page === 1 || loading"
+                                    <button @click="handlePageChange(PageAction.PREV)"
+                                        :disabled="page === 1 || isLoading"
                                         class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                                        :class="{ 'opacity-50 cursor-not-allowed': page === 1 || loading }">
+                                        :class="{ 'opacity-50 cursor-not-allowed': page === 1 || isLoading }">
                                         <span class="sr-only">Previous</span>
                                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                             <path fill-rule="evenodd"
@@ -183,9 +200,9 @@ onUnmounted(() => { clearTimeout(searchTimeout.value) })
                                         </svg>
                                     </button>
                                     <button @click="handlePageChange(PageAction.NEXT)"
-                                        :disabled="!store.hasMoreStockRatings || loading"
+                                        :disabled="!hasMoreStockRatings || isLoading"
                                         class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                                        :class="{ 'opacity-50 cursor-not-allowed': !store.hasMoreStockRatings || loading }">
+                                        :class="{ 'opacity-50 cursor-not-allowed': !hasMoreStockRatings || isLoading }">
                                         <span class="sr-only">Next</span>
                                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                             <path fill-rule="evenodd"

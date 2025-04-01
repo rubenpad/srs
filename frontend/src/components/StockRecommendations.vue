@@ -42,7 +42,7 @@ const { isLoading, data, status } = useQuery({
                         </div>
                     </div>
                 </div>
-            </template> 
+            </template>
 
             <template v-else-if="status === 'error'">
                 <div class="w-full px-3">
@@ -55,45 +55,49 @@ const { isLoading, data, status } = useQuery({
                 </div>
             </template>
 
-            <div v-else v-for="stock in data.data" :key="stock.ticker"
-                class="w-full max-w-full px-3 mb-6 sm:flex-none xl:mb-0 xl:w-1/5">
-                <div
-                    class="relative flex flex-col min-w-0 break-words bg-white shadow-soft-xl rounded-md bg-clip-border">
-                    <div class="flex-auto">
-                        <RouterLink :to="`/stock/${stock.ticker}`" class="w-full">
-                            <div class="grid grid-flow-col grid-rows-2 p-4">
-                                <h5 class="mb-0 self-center font-bold">
-                                    {{ stock.ticker }}
-                                    <span :class="['leading-normal text-sm font-weight-bolder', stock.target_price_change >=
-                                        0 ? 'text-lime-500' : 'text-red-500'
-                                    ]">{{ `${(stock.target_price_change > 0 ? '+' : '') + stock.target_price_change}%`
-                                    }}</span>
-                                </h5>
-                                <span :class="[
-                                    'rounded-md text-md font-medium ring-1 ring-inset mt-2 text-center p-2',
-                                    {
-                                        'bg-green-50 text-green-700 ring-green-600/20': stock.rating === 'Strong Buy',
-                                        'bg-lime-50 text-lime-700 ring-lime-600/20': stock.rating === 'Buy',
-                                        'bg-yellow-50 text-yellow-700 ring-yellow-600/20': stock.rating === 'Hold',
-                                        'bg-orange-50 text-orange-700 ring-orange-600/20': stock.rating === 'Sell',
-                                        'bg-red-50 text-red-700 ring-red-600/20': stock.rating === 'Strong Sell'
-                                    }
-                                ]">
-                                    {{ stock.rating }}
-                                </span>
-                                <div class="row-start-1 row-end-3 text-center p-8">
-                                    <h5>
-                                        Score
-                                    </h5>
-                                    <span class="text-lg font-bold">{{
-                                        stock.score }}</span>
-                                </div>
+            <template v-if="status === 'success'">
 
-                            </div>
-                        </RouterLink>
+                <div v-for="stock in data?.data" :key="stock.ticker"
+                    class="w-full max-w-full px-3 mb-6 sm:flex-none xl:mb-0 xl:w-1/5">
+                    <div
+                        class="relative flex flex-col min-w-0 break-words bg-white shadow-soft-xl rounded-md bg-clip-border">
+                        <div class="flex-auto">
+                            <RouterLink :to="`/stock/${stock.ticker}`" class="w-full">
+                                <div class="grid grid-flow-col grid-rows-2 p-4">
+                                    <h5 class="mb-0 self-center font-bold">
+                                        {{ stock.ticker }}
+                                        <span :class="['leading-normal text-sm font-weight-bolder', stock.target_price_change >=
+                                            0 ? 'text-lime-500' : 'text-red-500'
+                                        ]">{{ `${(stock.target_price_change > 0 ? '+' : '') +
+                                            stock.target_price_change}%`
+                                            }}</span>
+                                    </h5>
+                                    <span :class="[
+                                        'rounded-md text-md font-medium ring-1 ring-inset mt-2 text-center p-2',
+                                        {
+                                            'bg-green-50 text-green-700 ring-green-600/20': stock.rating === 'Strong Buy',
+                                            'bg-lime-50 text-lime-700 ring-lime-600/20': stock.rating === 'Buy',
+                                            'bg-yellow-50 text-yellow-700 ring-yellow-600/20': stock.rating === 'Hold',
+                                            'bg-orange-50 text-orange-700 ring-orange-600/20': stock.rating === 'Sell',
+                                            'bg-red-50 text-red-700 ring-red-600/20': stock.rating === 'Strong Sell'
+                                        }
+                                    ]">
+                                        {{ stock.rating }}
+                                    </span>
+                                    <div class="row-start-1 row-end-3 text-center p-8">
+                                        <h5>
+                                            Score
+                                        </h5>
+                                        <span class="text-lg font-bold">{{
+                                            stock.score }}</span>
+                                    </div>
+
+                                </div>
+                            </RouterLink>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
         </div>
     </div>
 </template>
