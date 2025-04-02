@@ -14,6 +14,8 @@ import (
 	"github.com/gocolly/colly/v2"
 	"github.com/rubenpad/srs/internal/domain/entity"
 
+	"github.com/cenkalti/backoff/v5"
+
 	finnhub "github.com/Finnhub-Stock-API/finnhub-go/v2"
 )
 
@@ -53,30 +55,49 @@ func (s *StockRatingApi) GetStockRatings(ctx context.Context, nextPage string) (
 		url = fmt.Sprintf("%s?next_page=%s", baseURL, nextPage)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		slog.Error("http error", "error", err)
-		return nil, nextPage, errors.New(errorMessage)
+	operation := func() ([]entity.StockRating, error) {
+		request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			slog.Error("http error", "error", err)
+			return nil, errors.New(errorMessage)
+		}
+
+		request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
+		response, err := s.httpClient.Do(request)
+		if err != nil {
+			return nil, errors.New(errorMessage)
+		}
+
+		defer response.Body.Close()
+
+		if response.StatusCode == http.StatusOK {
+			var stockRatings stockRatingsDto
+			if err := json.NewDecoder(response.Body).Decode(&stockRatings); err != nil {
+				slog.Error("error decoding stock ratings", "error", err)
+				return nil, errors.New(errorMessage)
+			}
+
+			nextPage = stockRatings.NextPage
+			return stockRatings.Items, nil
+		}
+
+		if response.StatusCode >= 400 && response.StatusCode <= 499 {
+			slog.Error("client error from external API", "status", response.StatusCode)
+			return nil, backoff.Permanent(errors.New(errorMessage))
+		}
+
+		slog.Info("error getting stock ratings - will retry", "status", response.StatusCode)
+		return nil, errors.New(errorMessage)
 	}
 
-	request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
-	response, err := s.httpClient.Do(request)
-	if err != nil {
-		return nil, nextPage, errors.New(errorMessage)
-	}
+	result, err := backoff.Retry(
+		ctx,
+		operation,
+		backoff.WithMaxTries(3),
+		backoff.WithMaxElapsedTime(1*time.Minute),
+		backoff.WithBackOff(backoff.NewExponentialBackOff()))
 
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, nextPage, errors.New(errorMessage)
-	}
-
-	var stockRatings stockRatingsDto
-	if err := json.NewDecoder(response.Body).Decode(&stockRatings); err != nil {
-		return nil, nextPage, errors.New(errorMessage)
-	}
-
-	return stockRatings.Items, stockRatings.NextPage, nil
+	return result, nextPage, err
 }
 
 func (s *StockRatingApi) GetStockDetails(ctx context.Context, ticker string) *entity.StockDetails {

@@ -20,7 +20,6 @@ type StockRating struct {
 	TargetPriceChange float64   `json:"target_price_change"`
 	Score             float32   `json:"score"`
 }
-
 type StockRatingAggregate struct {
 	Ticker            string    `json:"ticker"`
 	Time              time.Time `json:"time"`
