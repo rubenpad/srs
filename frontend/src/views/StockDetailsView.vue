@@ -3,5 +3,5 @@ import StockDetails from '@/components/StockDetails.vue';
 </script>
 
 <template>
-  <StockDetails/>
+  <StockDetails />
 </template>
