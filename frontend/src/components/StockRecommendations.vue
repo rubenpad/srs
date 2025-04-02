@@ -4,10 +4,14 @@ import {useQuery} from '@pinia/colada';
 
 const topRecommendations = 5;
 
-const {isLoading, data, status} = useQuery({
+const {isLoading, data, status, refetch} = useQuery({
   key: ['stock-recommendations'],
   query: () => axios.get(`/api/stock-recommendations?pageSize=${topRecommendations}`).then(response => response.data),
 });
+
+const handleRefetch = () => {
+  refetch();
+};
 </script>
 
 <template>
@@ -50,6 +54,12 @@ const {isLoading, data, status} = useQuery({
           <div class="bg-white rounded-md shadow-soft-xl p-6 text-center">
             <h2 class="text-xl font-bold text-red-600 mb-2">Failed to load recommendations</h2>
             <p class="text-gray-600 mb-4">We couldn't load the latest stock recommendations. Please try again.</p>
+            <button
+              @click="handleRefetch"
+              class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Try Again
+            </button>
           </div>
         </div>
       </template>

@@ -63,6 +63,10 @@ const handleSearch = (event: Event) => {
   }, 300);
 };
 
+const handleRefetch = () => {
+  refetch();
+};
+
 const handlePageChange = async (pageAction: PageAction) => {
   if (pageAction === PageAction.NEXT) {
     page.value++;
@@ -166,6 +170,25 @@ watch(
                   <tr v-for="row in 10" :key="row" class="animate-pulse">
                     <td v-for="column in 7" :key="column" class="px-6 py-4 whitespace-nowrap">
                       <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    </td>
+                  </tr>
+                </template>
+
+                <template v-else-if="status === 'error'">
+                  <tr>
+                    <td colspan="7" class="text-center py-8">
+                      <div class="bg-white rounded-md shadow-soft-xl p-6 max-w-md mx-auto">
+                        <h2 class="text-xl font-bold text-red-600 mb-2">Failed to load stock ratings</h2>
+                        <p class="text-gray-600 mb-4">
+                          We couldn't load the stock ratings information. Please try again.
+                        </p>
+                        <button
+                          @click="handleRefetch"
+                          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Try Again
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </template>
