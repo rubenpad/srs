@@ -161,6 +161,7 @@ func (ssr *StockRatingRepository) GetStockRecommendations(ctx context.Context, p
 				WHEN rating BETWEEN 1.0 AND 1.4 THEN 'Strong Sell'
 			END) as rating
 		FROM latest_stock_ratings
+		WHERE ROUND(avg_price_change * 100, 2) > 0
 		ORDER BY strong_buy_ratings DESC, buy_ratings DESC, target_price_change DESC, time DESC, score DESC
 		LIMIT @pageSize;	
 	`

@@ -100,7 +100,7 @@ const handleRefetch = () => {
                   </span>
                   <div class="row-start-1 row-end-3 text-center p-8">
                     <h5>Score</h5>
-                    <span class="text-lg font-bold">{{ stock.score }}</span>
+                    <span class="text-lg font-bold">{{ stock.score.toFixed(2) }}</span>
                   </div>
                 </div>
               </RouterLink>
