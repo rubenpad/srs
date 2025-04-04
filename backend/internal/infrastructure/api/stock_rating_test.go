@@ -127,6 +127,38 @@ var testCases = []struct {
 		expectError: true,
 		errorMsg:    "ticker/targets not matched",
 	},
+	{
+		name: "Target Raised - HCWainwright Brokerage",
+		line: "WKSP$1.50$11.50WorksporttargetraisedbyHCWainwrightBuyBuyMonMar31202500:30UTC",
+		expected: entity.StockRating{
+			Ticker:     "WKSP",
+			TargetFrom: "$1.50",
+			TargetTo:   "$11.50",
+			Company:    "Worksport",
+			Action:     "target raised by",
+			Brokerage:  "HC Wainwright",
+			RatingFrom: "Buy",
+			RatingTo:   "Buy",
+			Time:       mustParseTime("MonMar31202500:30UTC"),
+		},
+		expectError: false,
+	},
+	{
+		name: "Target Lowered - Wells Fargo & Company Brokerage",
+		line: "SITC$17.00$14.50SITECenterstargetloweredbyWellsFargo&CompanyEqualWeightEqualWeightThuMar27202500:30UTC",
+		expected: entity.StockRating{
+			Ticker:     "SITC",
+			TargetFrom: "$17.00",
+			TargetTo:   "$14.50",
+			Company:    "SITE Centers",
+			Action:     "target lowered by",
+			Brokerage:  "Wells Fargo & Company",
+			RatingFrom: "Equal Weight",
+			RatingTo:   "Equal Weight",
+			Time:       mustParseTime("ThuMar27202500:30UTC"),
+		},
+		expectError: false,
+	},
 }
 
 func TestParseStockRatingLine(t *testing.T) {

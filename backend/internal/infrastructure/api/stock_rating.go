@@ -297,31 +297,23 @@ func formatConcatenatedString(name string) string {
 	runes := []rune(name)
 
 	for i, r := range runes {
-		builder.WriteRune(r)
+		if i > 0 {
+			prevR := runes[i-1]
 
-		if i < len(runes)-1 {
-			nextR := runes[i+1]
-
-			if (unicode.IsLower(r) || unicode.IsDigit(r)) && unicode.IsUpper(nextR) {
+			if (unicode.IsLower(prevR) || unicode.IsDigit(prevR)) && unicode.IsUpper(r) {
 				builder.WriteRune(' ')
-				continue
-			}
-
-			if (unicode.IsLetter(r) || unicode.IsDigit(r) || r == ')') && (nextR == '(' || nextR == '&') {
+			} else if (unicode.IsLetter(prevR) || unicode.IsDigit(prevR) || prevR == ')') && (r == '(' || r == '&') {
 				builder.WriteRune(' ')
-				continue
-			}
-
-			if (r == ')' || r == '&') && (unicode.IsLetter(nextR) || unicode.IsDigit(nextR)) {
+			} else if (prevR == ')' || prevR == '&') && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
 				builder.WriteRune(' ')
-				continue
-			}
-
-			if r == ',' && !unicode.IsSpace(nextR) && (unicode.IsLetter(nextR) || unicode.IsDigit(nextR)) {
+			} else if prevR == ',' && !unicode.IsSpace(r) && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
 				builder.WriteRune(' ')
-				continue
+			} else if unicode.IsUpper(prevR) && unicode.IsUpper(r) && i < len(runes)-1 && unicode.IsLower(runes[i+1]) {
+				builder.WriteRune(' ')
 			}
 		}
+
+		builder.WriteRune(r)
 	}
 
 	return builder.String()
