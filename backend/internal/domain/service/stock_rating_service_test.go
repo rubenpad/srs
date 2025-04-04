@@ -51,8 +51,8 @@ func (m *MockStockRatingApi) GetStockDetails(ctx context.Context, ticker string)
 	return args.Get(0).(*entity.StockDetails)
 }
 
-func (m *MockStockRatingApi) GetStockRatings(ctx context.Context, nextPage string) ([]entity.StockRating, string, error) {
-	args := m.Called(ctx, nextPage)
+func (m *MockStockRatingApi) GetStockRatings(ctx context.Context, nextPage string, useCustomFormat bool) ([]entity.StockRating, string, error) {
+	args := m.Called(ctx, nextPage, useCustomFormat)
 	return args.Get(0).([]entity.StockRating), args.String(1), args.Error(2)
 }
 
@@ -94,9 +94,9 @@ func TestLoadStockRatingsData(t *testing.T) {
 	var mu sync.Mutex
 	var processedRatings []entity.StockRating
 
-	mockApi.On("GetStockRatings", ctx, "").
+	mockApi.On("GetStockRatings", ctx, "", false).
 		Return(testBatch1, "next_page", nil).Once()
-	mockApi.On("GetStockRatings", ctx, "next_page").
+	mockApi.On("GetStockRatings", ctx, "next_page", false).
 		Return(testBatch2, "", nil).Once()
 
 	// Capture processed ratings in thread-safe way
@@ -109,7 +109,7 @@ func TestLoadStockRatingsData(t *testing.T) {
 
 	service := NewStockRatingService(mockRepository, mockApi)
 
-	service.LoadStockRatingsData(ctx)
+	service.LoadStockRatingsData(ctx, false)
 
 	mockApi.AssertExpectations(t)
 	mockRepository.AssertExpectations(t)

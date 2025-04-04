@@ -129,7 +129,7 @@ func (s *StockRatingService) GetStockRecommendations(ctx context.Context, pageSi
 	}, nil
 }
 
-func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
+func (s *StockRatingService) LoadStockRatingsData(ctx context.Context, useCustomFormat bool) {
 	if !s.isLoading.CompareAndSwap(false, true) {
 		slog.Info("load stock ratings process already running")
 		return
@@ -137,7 +137,7 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 
 	defer s.isLoading.Store(false)
 
-	slog.Info("process to load stock ratings started")
+	slog.Info("process to load stock ratings started", "useCustomFormat", useCustomFormat)
 	start := time.Now()
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
@@ -163,7 +163,7 @@ func (s *StockRatingService) LoadStockRatingsData(ctx context.Context) {
 
 	nextPage := ""
 	for {
-		stockRatings, nNextPage, err := s.stockRatingApi.GetStockRatings(ctx, nextPage)
+		stockRatings, nNextPage, err := s.stockRatingApi.GetStockRatings(ctx, nextPage, useCustomFormat)
 		if err != nil {
 			errorMessage := "failed to get stock ratings from API"
 			slog.Error(errorMessage, "error", err)

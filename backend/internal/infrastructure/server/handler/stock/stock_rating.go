@@ -71,7 +71,7 @@ func (src *StockRatingController) GetStockRecommendations(ctx *gin.Context) {
 }
 
 func (src *StockRatingController) LoadStockRatingData(ctx *gin.Context) {
-	go src.stockRatingService.LoadStockRatingsData(ctx)
+	go src.stockRatingService.LoadStockRatingsData(ctx, ctx.Query("useCustomFormat") == "true")
 
 	ctx.JSON(http.StatusAccepted, gin.H{})
 }

@@ -40,7 +40,7 @@ type StockDetails struct {
 
 type IStockRatingApi interface {
 	GetStockDetails(ctx context.Context, ticker string) *StockDetails
-	GetStockRatings(ctx context.Context, nextPage string) ([]StockRating, string, error)
+	GetStockRatings(ctx context.Context, nextPage string, useCustomFormat bool) ([]StockRating, string, error)
 }
 
 type IStockRatingRepository interface {
